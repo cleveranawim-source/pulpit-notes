@@ -1,0 +1,11 @@
+{
+  "appId": "com.yeolstudio.pulpitnotes",
+  "appName": "강단노트",
+  "webDir": "www",
+  "backgroundColor": "#F4EFE6",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#F4EFE6",
+    "scrollEnabled": false
+  }
+}

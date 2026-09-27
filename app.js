@@ -14,6 +14,12 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
 
+// 아이패드 앱(Capacitor)으로 실행 중인지. 웹판과 같은 코드를 쓰고, 기기 기능만 갈라 쓴다
+const Cap = window.Capacitor;
+const NATIVE = !!Cap?.isNativePlatform?.();
+const plugin = name => Cap?.Plugins?.[name];
+if (NATIVE) document.documentElement.classList.add('native');
+
 // ─────────── 설정 ───────────
 const PEN_COLORS = ['#1F1B16', '#D23B2E', '#2456C8', '#1F8A4C'];
 const HL_COLORS = ['#FFE45C', '#A8E890', '#FFB3D1', '#A9DBFF'];
@@ -181,7 +187,7 @@ function ago(t) {
 }
 async function renderFoot() {
   const foot = $('#libFoot');
-  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const standalone = NATIVE || matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   let used = '';
   try { const e = await navigator.storage?.estimate?.(); if (e?.usage) used = ` 지금 ${(e.usage / 1048576).toFixed(1)}MB 쓰는 중.`; } catch {}
   const last = readLS('pn.lastBackup', 0);
@@ -210,19 +216,24 @@ function cardMenu(anchor, d) {
 
 async function importFiles(files) {
   const list = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  const nfc = f => f.name.normalize('NFC'); // 맥·iOS에서 온 한글 이름은 자모가 풀린(NFD) 채로 온다
   if (!list.length) { toast('PDF 파일만 불러올 수 있어요'); return; }
   navigator.storage?.persist?.().catch(() => {});
   const existing = await idb.all('docs');
   let added = 0, lastId = null;
   for (const f of list) {
-    if (existing.some(d => d.name === f.name && d.size === f.size)) { toast(`이미 서재에 있어요 — ${f.name}`); continue; }
+    const dup = existing.find(d => d.name === nfc(f) && d.size === f.size);
+    if (dup) {
+      if (list.length === 1) { busy(); await renderLibrary(); return openDoc(dup.id); }
+      toast(`이미 서재에 있어요 — ${f.name}`); continue;
+    }
     busy(`불러오는 중… ${f.name}`);
     try {
       const buf = await f.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ ...PDF_OPTS, data: new Uint8Array(buf.slice(0)) }).promise;
       const { crop, thumb } = await analyze(pdf);
       const id = newId();
-      const doc = { id, name: f.name, size: f.size, ...parseName(f.name), pages: pdf.numPages, added: Date.now(), opened: 0, crop, cropOn: true, pos: null, thumb, inkCount: 0 };
+      const doc = { id, name: nfc(f), size: f.size, ...parseName(nfc(f)), pages: pdf.numPages, added: Date.now(), opened: 0, crop, cropOn: true, pos: null, thumb, inkCount: 0 };
       await pdf.destroy();
       await idb.put('files', { id, data: buf });
       await idb.put('docs', doc);
@@ -1268,21 +1279,31 @@ $('#pTarget').onclick = () => { settings.target = TARGETS[(TARGETS.indexOf(setti
 // ── 화면 꺼짐 방지 ──
 let wakeLock = null;
 async function requestWake() {
-  if (!('wakeLock' in navigator) || wakeLock || R?.mode !== 'pulpit') return updateWake();
+  if (wakeLock || R?.mode !== 'pulpit') return updateWake();
+  const keep = NATIVE && plugin('KeepAwake');
+  if (keep) {
+    try { await keep.keepAwake(); wakeLock = { release: () => keep.allowSleep() }; } catch { wakeLock = null; }
+    return updateWake();
+  }
+  if (!('wakeLock' in navigator)) return updateWake();
   try {
     wakeLock = await navigator.wakeLock.request('screen');
     wakeLock.addEventListener('release', () => { wakeLock = null; updateWake(); });
   } catch { wakeLock = null; }
   updateWake();
 }
-function releaseWake() { wakeLock?.release().catch(() => {}); wakeLock = null; updateWake(); }
+function releaseWake() { Promise.resolve(wakeLock?.release()).catch(() => {}); wakeLock = null; updateWake(); }
 function updateWake() {
   const w = $('#pWake');
   w.classList.toggle('off', !wakeLock);
   w.title = wakeLock ? '화면이 꺼지지 않아요' : '화면 꺼짐 방지가 꺼져 있어요 (설정 › 디스플레이 › 자동 잠금 확인)';
 }
 $('#pWake').onclick = () => wakeLock ? toast('화면이 꺼지지 않게 잡아 두었어요', 1600) : (requestWake(), toast('화면 꺼짐 방지를 다시 켰어요. 안 되면 설정 › 디스플레이 › 자동 잠금을 ‘안 함’으로 두세요.', 3600));
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && R?.mode === 'pulpit') requestWake(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || R?.mode !== 'pulpit') return;
+  if (!NATIVE) wakeLock = null; // 웹의 잠금은 화면을 벗어나면 풀린다
+  requestWake();
+});
 
 // ═══════════════════ 필기 포함 PDF ═══════════════════
 async function exportPdf() {
@@ -1345,8 +1366,34 @@ async function exportPdf() {
     toast('PDF를 만들지 못했어요', 3000);
   }
 }
+const blobToBase64 = blob => new Promise((res, rej) => {
+  const r = new FileReader();
+  r.onload = () => res(String(r.result).split(',')[1]);
+  r.onerror = () => rej(r.error);
+  r.readAsDataURL(blob);
+});
+function base64ToBytes(b64) {
+  const bin = atob(b64), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+// 앱: 임시 폴더에 파일을 쓰고 iOS 공유 시트(파일에 저장 · 메일 · 드라이브 등)로 넘긴다
+async function nativeShare(blob, name, onSaved) {
+  try {
+    const { uri } = await plugin('Filesystem').writeFile({ path: name, data: await blobToBase64(blob), directory: 'CACHE' });
+    await plugin('Share').share({ title: name, files: [uri] });
+    onSaved?.();
+  } catch (e) {
+    if (!/cancel/i.test(e?.message || '')) { console.error(e); toast('파일을 내보내지 못했어요', 2800); }
+  }
+}
+
 // 만든 파일을 공유 시트(파일에 저장)나 다운로드로 내보낸다
 function offerFile(blob, name, { title, body, onSaved }) {
+  if (NATIVE) {
+    dialog({ title, body, buttons: [{ label: '닫기', value: 0 }, { label: '공유 · 파일에 저장', cls: 'primary', onClick: () => nativeShare(blob, name, onSaved) }] });
+    return;
+  }
   const file = new File([blob], name, { type: blob.type });
   const canShare = !!navigator.canShare?.({ files: [file] });
   const download = () => {
@@ -1633,8 +1680,39 @@ addEventListener('keydown', e => {
 // 아이패드에서 화면 전체가 확대되는 것을 막는다(원고 크기는 여백 줄이기·가로 보기로)
 document.addEventListener('gesturestart', e => e.preventDefault());
 
+// ═══════════════════ 다른 앱에서 받은 파일 ═══════════════════
+// 파일 앱 · 한글 · 워드 · 메일 등에서 공유 → 강단노트. iOS가 앱의 Inbox 에 복사해 준 파일을 읽는다
+async function handleOpenedFile(url) {
+  if (!/^file:/i.test(url || '')) return;
+  const FS = plugin('Filesystem');
+  const name = decodeURIComponent(url.split('/').pop() || '원고.pdf').normalize('NFC');
+  try {
+    const { data } = await FS.readFile({ path: url });
+    const bytes = base64ToBytes(data);
+    closeSheet();
+    if (/\.zip$/i.test(name)) {
+      if (R) await closeDoc();
+      if (await ask('백업에서 복원할까요?', `「${name}」의 원고와 필기를 서재에 합쳐요. 이미 있는 원고는 필기가 더 최근인 쪽을 남겨요.`, '복원하기')) {
+        await restoreBackup(new File([bytes], name, { type: 'application/zip' }));
+      }
+    } else {
+      if (R) await closeDoc();
+      await importFiles([new File([bytes], name, { type: 'application/pdf' })]);
+    }
+  } catch (e) {
+    console.error(e);
+    toast('받은 파일을 열지 못했어요', 2800);
+  } finally {
+    FS.deleteFile({ path: url }).catch(() => {});
+  }
+}
+if (NATIVE) {
+  plugin('App')?.addListener('appUrlOpen', e => handleOpenedFile(e.url));
+  plugin('App')?.getLaunchUrl?.().then(r => r?.url && handleOpenedFile(r.url)).catch(() => {});
+}
+
 // ═══════════════════ 시작 ═══════════════════
 renderLibrary();
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+if (!NATIVE && 'serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
 }

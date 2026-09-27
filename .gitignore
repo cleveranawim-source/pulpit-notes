@@ -1,2 +1,7 @@
 .test/
 .DS_Store
+node_modules/
+www/
+ios/App/App/public/
+ios/DerivedData/
+build/

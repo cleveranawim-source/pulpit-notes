@@ -50,6 +50,24 @@
   그래서 내보낸 PDF도 벡터 그대로이고, 되돌리기는 쪽 단위 스냅숏(`{t:'snap', before, after}`)으로 한다.
 - 펜슬 판별: `pointerType === 'pen'` + `touchstart`에서 `touchType === 'stylus'`면 `preventDefault`로 스크롤 차단.
 
+## 아이패드 앱 (Capacitor 8.5.2, iPad 전용)
+
+웹판과 같은 코드를 쓰고, 기기 기능만 `NATIVE` 로 갈라 쓴다(app.js 윗부분).
+
+| | 웹판 | 앱 |
+|---|---|---|
+| 화면 꺼짐 방지 | Wake Lock API | `@capacitor-community/keep-awake` |
+| 내보내기·백업 저장 | Web Share / 다운로드 | Filesystem(임시 폴더) → `@capacitor/share` 공유 시트 |
+| 다른 앱에서 받기 | — | Info.plist `CFBundleDocumentTypes`(PDF·zip) → `appUrlOpen` → Filesystem.readFile |
+| 오프라인 | 서비스워커 | 앱 안에 파일이 들어 있음(서비스워커 안 씀) |
+
+- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.0(1) · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
+- 빌드: `npm run ios`(www/ 모으기 + cap sync) → Xcode에서 `ios/App/App.xcodeproj` 열기 → Product › Archive.
+  시뮬레이터: `xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -derivedDataPath ios/DerivedData build CODE_SIGNING_ALLOWED=NO`.
+- JS 콘솔 보기: `xcrun simctl launch --console-pty <기기> com.yeolstudio.pulpitnotes` (⚡️ 로그).
+- 아이콘·실행 화면: `ios/App/App/Assets.xcassets` (1024 아이콘은 알파 없이).
+- 다른 앱에서 온 파일 이름은 NFD(자모 분리)라 `normalize('NFC')` 필수.
+
 ## 로컬 실행
 
 ```bash
