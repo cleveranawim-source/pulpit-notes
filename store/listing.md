@@ -17,10 +17,10 @@
 | 지원 URL | https://cleveranawim-source.github.io/pulpit-notes/support.html |
 | 개인정보 처리방침 URL | https://cleveranawim-source.github.io/pulpit-notes/privacy.html |
 | 마케팅 URL (선택) | https://cleveranawim-source.github.io/pulpit-notes/ |
-| 저작권 | © 2026 ○○○ ← 표기할 이름(개인 이름·단체명)을 넣어 주세요 |
+| 저작권 | 2026 Yeol Studio |
 | 앱 개인정보 | **데이터를 수집하지 않음** |
 | 암호화 수출 규정 | Info.plist에 '해당 없음'으로 넣어 둠(업로드 때 따로 묻지 않음) |
-| 가격 | 결정 필요 (무료 / 유료) |
+| 가격 | 무료 (가격 등급 ‘무료’, 앱 내 구입 없음) |
 
 ## 프로모션 텍스트 (88/170)
 
