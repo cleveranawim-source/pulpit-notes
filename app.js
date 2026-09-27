@@ -19,7 +19,8 @@ const PEN_COLORS = ['#1F1B16', '#D23B2E', '#2456C8', '#1F8A4C'];
 const HL_COLORS = ['#FFE45C', '#A8E890', '#FFB3D1', '#A9DBFF'];
 const TARGETS = [0, 5, 10, 15, 20, 25, 30, 40];
 const THEMES = ['light', 'sepia', 'dark'];
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.3.1';
+const SUPPORT_EMAIL = 'lovewords10@gmail.com';
 
 const savedSettings = readLS('pn.settings', {});
 // 예전 3단계 굵기(penSize·hlSize) → 슬라이더 값(쪽 폭 대비)
@@ -1406,6 +1407,7 @@ function openSettings() {
       h('div', 'sgroup-t', '정보'),
       row('#i-lock', '개인정보 처리방침', '모으는 정보가 없어요 — 모두 기기 안에', () => openPrivacy()),
       row('#i-info', '오픈소스 라이선스', 'pdf.js · pdf-lib · 글꼴', () => openLicenses()),
+      row('#i-mail', '문의하기', SUPPORT_EMAIL, () => { location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`강단노트 문의 (${APP_VERSION})`)}`; }),
     );
     const ver = h('p', 'sver', `강단노트 ${APP_VERSION}`);
     try { const e = await navigator.storage?.estimate?.(); if (e?.usage) ver.textContent += ` · 저장 공간 ${(e.usage / 1048576).toFixed(1)}MB 사용`; } catch {}
