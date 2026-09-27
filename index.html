@@ -147,6 +147,40 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .size i{display:block;border-radius:50%;background:var(--ink-2)}
 .tool.finger.on{background:var(--accent-soft);color:var(--accent);box-shadow:none}
 #reader[data-mode="pulpit"] .palette{display:none}
+.opts{display:flex;align-items:center}
+.emode{display:flex;background:rgba(0,0,0,.06);border-radius:11px;padding:3px;gap:2px}
+.emode button{height:38px;padding:0 12px;border-radius:8px;font-size:14px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.emode button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.opts .hint{font-size:13.5px;color:var(--ink-2);padding:0 10px;white-space:nowrap}
+.size i{box-sizing:border-box}
+
+/* 굵기 슬라이더 */
+.sizepop{display:flex;align-items:center;gap:14px;padding:4px 8px 10px;width:300px;max-width:calc(100vw - 40px)}
+.sizepop .prev{width:64px;height:64px;flex:none;display:grid;place-items:center;border-radius:12px;background:#fff;
+  box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+.sizepop .prev i{display:block;box-sizing:border-box}
+.sizepop input{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:36px;background:transparent;margin:0}
+.sizepop input::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,#E4DACB,#B9AC98)}
+.sizepop input::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-11px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.06)}
+.sizepop input::-moz-range-track{height:6px;border-radius:3px;background:#D6CBB8}
+.sizepop input::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+/* 올가미·선택·지우개 커서 */
+.lasso{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible}
+.lasso polygon{fill:rgba(124,36,51,.06);stroke:var(--accent);stroke-width:1.6;stroke-dasharray:6 5;stroke-linejoin:round}
+.page canvas.float{pointer-events:none;will-change:transform}
+.selbox{position:absolute;z-index:2;border:1.5px dashed var(--accent);border-radius:8px;background:rgba(124,36,51,.05);pointer-events:none;will-change:transform}
+.selbar{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);display:flex;align-items:center;gap:2px;
+  padding:4px 4px 4px 12px;border-radius:12px;background:#2A241D;color:#F4EFE6;pointer-events:auto;white-space:nowrap;
+  box-shadow:0 10px 24px -10px rgba(0,0,0,.55);font-size:13.5px}
+.selbox.below .selbar{bottom:auto;top:calc(100% + 8px)}
+.selbar .cnt{color:#CFC5B6;margin-right:6px}
+.selbar button{height:36px;padding:0 10px;border-radius:9px;display:flex;align-items:center;gap:6px;font-size:14px;color:#F4EFE6}
+.selbar button:active{background:rgba(255,255,255,.14)}
+.selbar svg.i{width:17px;height:17px}
+.ecur{position:absolute;z-index:3;border-radius:50%;border:1.5px solid rgba(40,30,20,.6);background:rgba(255,255,255,.35);
+  box-shadow:0 0 0 1px rgba(255,255,255,.7);pointer-events:none}
 
 /* 강단 상태바 */
 .pbar{flex:none;display:none;align-items:center;gap:6px;position:relative;z-index:5;
@@ -217,7 +251,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
   .seg button{padding:0 11px}
   .pbar .clock{display:none}
 }
-@media (max-width:480px){ .palette .size,.palette .sep.s2{display:none} }
+@media (max-width:480px){ .palette .size,.palette .sep.s2,.opts .hint{display:none} }
+@media (max-width:760px){ .opts .hint{display:none} }
 </style>
 </head>
 <body>
@@ -245,6 +280,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+    <symbol id="i-lasso" viewBox="0 0 24 24"><path d="M8.2 17.6C5 16.6 3 14.4 3 11.8 3 7.9 7 5 12 5s9 2.9 9 6.8-4 6.8-9 6.8" stroke-dasharray="2.4 2.6"/><path d="M8.5 16.2c1.6.3 2.2 1.6 1.4 2.6-.9 1.1-2.9.6-2.7-.9.1-.8.6-1.4 1.3-1.7z"/><path d="M8.3 19.4c-.2 1.3-.9 2.2-2.1 2.6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-pages" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
   </defs>
 </svg>
@@ -318,11 +355,12 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
   </div>
 
   <nav class="palette" id="palette">
+    <button class="tool" data-tool="select" aria-label="고르기"><svg class="i"><use href="#i-lasso"/></svg></button>
     <button class="tool" data-tool="pen" aria-label="펜"><svg class="i"><use href="#i-pen"/></svg><span class="tip"></span></button>
     <button class="tool" data-tool="hl" aria-label="형광펜"><svg class="i"><use href="#i-hl"/></svg><span class="tip"></span></button>
     <button class="tool" data-tool="eraser" aria-label="지우개"><svg class="i"><use href="#i-eraser"/></svg></button>
     <span class="sep"></span>
-    <div class="swatches" id="swatches"></div>
+    <div class="opts" id="opts"></div>
     <button class="size" id="btnSize" aria-label="굵기"><i></i></button>
     <span class="sep s2"></span>
     <button class="tool" id="btnUndo" aria-label="되돌리기"><svg class="i"><use href="#i-undo"/></svg></button>
