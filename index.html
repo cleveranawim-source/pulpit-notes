@@ -13,10 +13,10 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
 <style>
+/* 제목 글꼴은 앱에 넣어 둔다(오프라인 · 외부 요청 없음). 고운바탕, SIL OFL 1.1 */
+@font-face{font-family:"Gowun Batang";src:url("fonts/GowunBatang-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Gowun Batang";src:url("fonts/GowunBatang-Bold.woff2") format("woff2");font-weight:700;font-display:swap}
 :root{
   --paper:#F4EFE6; --paper-2:#EBE4D6; --card:#FBF8F2;
   --ink:#2A241D; --ink-2:#6E6356; --ink-3:#A0968A; --line:#DCD2C1;
@@ -243,6 +243,51 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .spin{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* 서재 추가 요소 */
+.lib-actions .seg.sort button{height:38px;padding:0 13px;font-size:14px}
+.gear{color:var(--ink-2)}
+.empty-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.linkbtn{color:var(--accent);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:6px 2px}
+.lib-foot .linkbtn{font-size:13px;margin-left:6px;padding:0}
+.field{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;padding:0 14px;font:inherit;font-size:16px;
+  background:#fff;color:var(--ink);margin:0 0 18px;outline:none}
+.field:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+/* 설정 창 */
+.sheet-card{width:min(560px,100%);max-height:min(86vh,760px);display:flex;flex-direction:column;background:#FBF8F2;
+  border-radius:22px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);overflow:hidden;animation:pop .16s ease-out}
+.sheet-card header{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 8px 24px}
+.sheet-card h3{font-family:var(--serif);font-size:22px;margin:0}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 22px}
+.sgroup-t{font-size:12.5px;font-weight:700;color:var(--ink-3);letter-spacing:.04em;padding:16px 8px 6px}
+.srow{width:100%;display:flex;align-items:center;gap:14px;padding:12px;border-radius:14px;text-align:left;background:#fff;
+  box-shadow:0 0 0 1px var(--line);margin-bottom:8px}
+.srow:active{background:var(--paper-2)}
+.srow>.i{color:var(--accent)}
+.srow .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.srow b{font-size:15.5px;font-weight:600}
+.srow small{font-size:13px;color:var(--ink-2)}
+.srow .chev{color:var(--ink-3);width:18px;height:18px}
+.snote{font-size:13px;color:var(--ink-2);line-height:1.65;margin:4px 8px 0;word-break:keep-all}
+.slead{font-size:15px;color:var(--ink);line-height:1.75;margin:4px 8px 14px;word-break:keep-all}
+.sver{font-size:12.5px;color:var(--ink-3);text-align:center;margin:22px 0 0}
+.ptitle{display:block;font-size:15px;margin:10px 8px 2px;color:var(--accent)}
+.howto{display:flex;gap:14px;align-items:baseline;padding:13px 14px;margin:0 0 8px;background:#fff;border-radius:14px;box-shadow:0 0 0 1px var(--line)}
+.howto b{flex:none;width:72px;font-size:15px}
+.howto span{font-size:15px;color:var(--ink);line-height:1.5}
+.lic{display:flex;flex-direction:column;gap:2px;padding:12px 14px;margin:0 0 8px;background:#fff;border-radius:14px;box-shadow:0 0 0 1px var(--line)}
+.lic b{font-size:15px}.lic span{font-size:13.5px;color:var(--accent);font-weight:600}.lic small{font-size:13px;color:var(--ink-2)}
+
+/* 첫 사용 안내 */
+.coach{position:absolute;left:50%;transform:translateX(-50%);top:calc(74px + var(--safe-t));z-index:7;width:min(520px,calc(100% - 28px));
+  display:flex;align-items:center;gap:14px;padding:14px 14px 14px 18px;border-radius:16px;background:#2A241D;color:#F4EFE6;
+  box-shadow:0 18px 40px -16px rgba(0,0,0,.6);animation:coachIn .3s both}
+@keyframes coachIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+.coach div{flex:1;display:flex;flex-direction:column;gap:3px;line-height:1.5;word-break:keep-all}
+.coach b{font-size:15px}.coach span{font-size:13.5px;color:#D8CFC2}
+.coach .btn{height:40px;flex:none}
+#reader[data-mode="pulpit"] .coach{display:none}
+
 @media (max-width:640px){
   #library{padding-left:calc(18px + var(--safe-l));padding-right:calc(18px + var(--safe-r))}
   .grid{grid-template-columns:repeat(2,1fr);gap:22px 14px}
@@ -281,6 +326,12 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
     <symbol id="i-lasso" viewBox="0 0 24 24"><path d="M8.2 17.6C5 16.6 3 14.4 3 11.8 3 7.9 7 5 12 5s9 2.9 9 6.8-4 6.8-9 6.8" stroke-dasharray="2.4 2.6"/><path d="M8.5 16.2c1.6.3 2.2 1.6 1.4 2.6-.9 1.1-2.9.6-2.7-.9.1-.8.6-1.4 1.3-1.7z"/><path d="M8.3 19.4c-.2 1.3-.9 2.2-2.1 2.6"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.3-2.5 3.8"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-backup" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+    <symbol id="i-restore" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7.5 7.5L12 3l4.5 4.5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5h.01"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-pages" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
   </defs>
@@ -301,7 +352,9 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     </div>
     <div class="lib-actions">
       <label class="search" id="searchBox" hidden><svg class="i"><use href="#i-search"/></svg><input id="q" type="search" placeholder="제목 찾기" autocomplete="off"></label>
+      <div class="seg sort" id="sortSeg" hidden><button data-sort="recent">최근</button><button data-sort="date">설교 날짜</button></div>
       <button id="btnImport" class="btn primary"><svg class="i"><use href="#i-plus"/></svg>원고 불러오기</button>
+      <button id="btnSettings" class="icon-btn gear" aria-label="설정"><svg class="i"><use href="#i-gear"/></svg></button>
     </div>
   </header>
   <main id="grid" class="grid"></main>
@@ -317,10 +370,15 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     </svg>
     <h2>아직 불러온 원고가 없어요</h2>
     <p>설교 원고 PDF를 불러오면 여기 쌓여요.<br>애플펜슬로 표시하고, 강단에서는 탭 한 번으로 넘겨 보세요.</p>
-    <button class="btn primary" data-act="import"><svg class="i"><use href="#i-plus"/></svg>PDF 불러오기</button>
+    <div class="empty-actions">
+      <button class="btn primary" data-act="import"><svg class="i"><use href="#i-plus"/></svg>PDF 불러오기</button>
+      <button class="btn" data-act="sample"><svg class="i"><use href="#i-book"/></svg>예시 원고로 둘러보기</button>
+    </div>
+    <button class="linkbtn" data-act="howto">한글 · 워드 원고를 PDF로 만드는 법</button>
   </div>
   <footer class="lib-foot" id="libFoot"></footer>
   <input id="file" type="file" accept="application/pdf,.pdf" multiple hidden>
+  <input id="restoreFile" type="file" accept=".zip,application/zip" hidden>
 </section>
 
 <!-- 리더 -->

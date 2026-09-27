@@ -19,6 +19,9 @@
    시계·타이머(목표 시간 진행 막대)·화면 꺼짐 방지·밝게/종이/어둡게. 블루투스 페이지 넘김 페달(방향키·PageDown) 지원.
 5. 메뉴 ⋯ → **필기 포함 PDF 내보내기**: 원본 PDF 위에 벡터로 필기를 얹어 공유 시트(파일에 저장)로 보낸다.
 
+6. 서재 오른쪽 위 **설정**: 예시 원고(사용법 겸 연습장) · PDF 만드는 법 · **백업 만들기 / 백업에서 복원** · 개인정보 처리방침 · 오픈소스 라이선스.
+   서재 카드 ⋯ → 제목 바꾸기 · 지우기. 정렬은 최근 연 순 / 설교 날짜 순.
+
 **여백 줄여 크게 보기**(기본 켬): 불러올 때 모든 쪽의 글자 영역을 재서 바깥 여백을 잘라 낸다 → 같은 화면에서 글씨가 약 1.3배 커진다.
 
 ## 구조
@@ -29,6 +32,15 @@
 | `app.js` | 서재·리더·필기·강단 모드·내보내기 전부(ES 모듈) |
 | `sw.js` | 오프라인 캐시. **앱 파일을 고치면 `VERSION`을 올릴 것** |
 | `vendor/` | pdf.js 4.10.38(legacy 빌드)·pdf-lib 1.17.1 — CDN 없이 동작하도록 동봉 |
+| `fonts/` | 고운바탕 400·700 woff2(한글 11,172자 서브셋, SIL OFL) + 라이선스 전문. 외부 글꼴 요청 없음 |
+| `sample/` | 예시 원고 `sample.pdf`(Pretendard, OFL)와 원본 `sample-source.html` |
+| `privacy.html` · `support.html` | 앱스토어 등록용 개인정보 처리방침 · 지원 페이지 |
+
+- 예시 원고 다시 만들기(내용을 고친 뒤):
+  `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-pdf-header-footer --print-to-pdf=sample/sample.pdf sample/sample-source.html`
+  → `sw.js` 의 `VERSION` 도 올릴 것(예시 원고는 캐시 우선).
+- 백업 파일은 무압축 zip: `manifest.json`(원고 목록) + `pdf/<id>.pdf` + `ink/<id>.json`. 풀면 원본 PDF가 그대로 보인다.
+  복원은 합치기: 없는 원고는 추가, 같은 원고는 필기가 더 최근인 쪽을 남긴다.
 
 - 필기 저장 형식: 쪽마다 획 배열 `{t:'pen'|'hl', c:색, w:굵기(쪽 폭 비율), p:[x,y,압력,…](쪽 크기로 정규화)}`.
   그래서 여백 자르기·가로세로 전환·확대와 무관하게 제자리에 붙는다.

@@ -19,6 +19,7 @@ const PEN_COLORS = ['#1F1B16', '#D23B2E', '#2456C8', '#1F8A4C'];
 const HL_COLORS = ['#FFE45C', '#A8E890', '#FFB3D1', '#A9DBFF'];
 const TARGETS = [0, 5, 10, 15, 20, 25, 30, 40];
 const THEMES = ['light', 'sepia', 'dark'];
+const APP_VERSION = '0.3.0';
 
 const savedSettings = readLS('pn.settings', {});
 // 예전 3단계 굵기(penSize·hlSize) → 슬라이더 값(쪽 폭 대비)
@@ -27,7 +28,7 @@ if (savedSettings.hlW == null && savedSettings.hlSize != null) savedSettings.hlW
 delete savedSettings.penSize; delete savedSettings.hlSize;
 const settings = Object.assign({
   tool: 'pen', penColor: PEN_COLORS[1], hlColor: HL_COLORS[0], penW: 0.0036, hlW: 0.026, eraseR: 0.012, eraseMode: 'part',
-  finger: false, themePrep: 'light', themePulpit: 'light', target: 0,
+  finger: false, themePrep: 'light', themePulpit: 'light', target: 0, sort: 'recent',
 }, savedSettings);
 function readLS(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
 function writeLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
@@ -82,21 +83,30 @@ function busy(msg) {
   document.body.append(b);
 }
 // buttons: [{label, cls, value, onClick}] — onClick 은 탭 이벤트 안에서 바로 실행된다(공유 시트용)
-function dialog({ title, body, buttons }) {
+// input 을 주면 입력 칸이 생기고, value 가 'input' 인 버튼은 입력한 글을 돌려준다
+function dialog({ title, body, buttons, input }) {
   return new Promise(resolve => {
     const s = document.createElement('div');
     s.className = 'scrim';
     s.innerHTML = '<div class="dialog" role="dialog"><h3></h3><p></p><div class="row"></div></div>';
     s.querySelector('h3').textContent = title;
     s.querySelector('p').textContent = body || '';
-    const close = v => { s.remove(); resolve(v); };
+    if (!body) s.querySelector('p').remove();
+    let field = null;
+    if (input != null) {
+      field = Object.assign(document.createElement('input'), { className: 'field', value: input, enterKeyHint: 'done' });
+      s.querySelector('.row').before(field);
+    }
+    const close = v => { s.remove(); resolve(v === 'input' ? field.value.trim() : v); };
     for (const b of buttons) {
       const el = Object.assign(document.createElement('button'), { className: 'btn ' + (b.cls || ''), textContent: b.label });
       el.onclick = () => { b.onClick?.(); close(b.value); };
       s.querySelector('.row').append(el);
     }
+    field?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); close('input'); } });
     s.addEventListener('click', e => { if (e.target === s) close(undefined); });
     document.body.append(s);
+    field?.focus();
   });
 }
 const ask = (title, body, ok, danger) => dialog({
@@ -126,10 +136,15 @@ const lib = $('#library'), grid = $('#grid'), fileInput = $('#file');
 let docsCache = [];
 
 async function renderLibrary() {
-  docsCache = (await idb.all('docs')).sort((a, b) => (b.opened || b.added) - (a.opened || a.added));
+  const recent = (a, b) => (b.opened || b.added) - (a.opened || a.added);
+  docsCache = (await idb.all('docs')).sort(settings.sort === 'date'
+    ? (a, b) => (b.date || '').localeCompare(a.date || '') || recent(a, b) // 설교 날짜 최신 순, 날짜 없으면 뒤로
+    : recent);
   const q = $('#q').value.trim();
   const list = q ? docsCache.filter(d => [d.title, d.kind, d.date, d.name].join(' ').includes(q)) : docsCache;
   $('#searchBox').hidden = docsCache.length < 7;
+  $('#sortSeg').hidden = docsCache.length < 2;
+  $$('#sortSeg button').forEach(b => b.classList.toggle('on', b.dataset.sort === settings.sort));
   $('#empty').hidden = docsCache.length > 0;
   grid.hidden = docsCache.length === 0;
   grid.replaceChildren(...list.map((d, n) => {
@@ -168,13 +183,21 @@ async function renderFoot() {
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   let used = '';
   try { const e = await navigator.storage?.estimate?.(); if (e?.usage) used = ` 지금 ${(e.usage / 1048576).toFixed(1)}MB 쓰는 중.`; } catch {}
+  const last = readLS('pn.lastBackup', 0);
   foot.innerHTML = `
-    <div><b>원고와 필기는 이 기기 안에만 저장돼요.</b>${used} 서버로 보내지 않아요.</div>
-    ${standalone ? '' : '<div>아이패드 Safari에서 <b>공유 → 홈 화면에 추가</b>로 설치해 두세요. 인터넷이 없어도 열리고, 저장한 원고가 지워지지 않게 보관돼요.</div>'}
-    <div><b>강단 모드</b> — 화면 오른쪽을 탭하면 다음, 왼쪽을 탭하면 이전으로 넘어가요. 블루투스 페이지 넘김 페달(방향키)도 돼요.</div>`;
+    <div><b>원고와 필기는 이 기기 안에만 저장돼요.</b>${used} 서버로 보내지 않아요.
+      ${docsCache.length ? `<button class="linkbtn" data-act="backup">${last ? `마지막 백업 ${ago(last)} · 다시 백업하기` : '아직 백업하지 않았어요 · 백업하기'}</button>` : ''}</div>
+    ${standalone ? '' : '<div>아이패드 Safari에서 <b>공유 → 홈 화면에 추가</b>로 설치해 두세요. 인터넷이 없어도 열리고, 저장한 원고가 지워지지 않게 보관돼요.</div>'}`;
+  foot.querySelector('[data-act=backup]')?.addEventListener('click', makeBackup);
 }
 function cardMenu(anchor, d) {
   openMenu(anchor, m => {
+    m.append(menuItem('#i-pen', '제목 바꾸기', async () => {
+      const t = await dialog({ title: '제목 바꾸기', input: d.title, buttons: [{ label: '취소', value: null }, { label: '저장', cls: 'primary', value: 'input' }] });
+      if (!t || t === d.title) return;
+      await idb.put('docs', { ...d, title: t });
+      renderLibrary();
+    }));
     m.append(menuItem('#i-trash', '서재에서 지우기', async () => {
       if (!await ask('원고를 지울까요?', `「${d.title}」와 여기에 한 필기가 모두 지워져요. 되돌릴 수 없어요.`, '지우기', true)) return;
       await Promise.all([idb.del('docs', d.id), idb.del('files', d.id), idb.del('ink', d.id)]);
@@ -258,6 +281,10 @@ async function analyze(pdf) {
 
 $('#btnImport').onclick = () => fileInput.click();
 $('#empty [data-act=import]').onclick = () => fileInput.click();
+$('#empty [data-act=sample]').onclick = () => openSample();
+$('#empty [data-act=howto]').onclick = () => openPdfHowto();
+$('#btnSettings').onclick = () => openSettings();
+$$('#sortSeg button').forEach(b => b.onclick = () => { settings.sort = b.dataset.sort; saveSettings(); renderLibrary(); });
 fileInput.onchange = () => { const f = [...fileInput.files]; fileInput.value = ''; if (f.length) importFiles(f); };
 $('#q').oninput = () => renderLibrary();
 
@@ -307,6 +334,7 @@ async function openDoc(id) {
     layout(doc.pos || { i: 0, f: 0 });
     refreshPalette();
     updateUndoUI();
+    maybeCoach();
     doc.opened = Date.now();
     idb.put('docs', doc);
   } catch (e) {
@@ -328,6 +356,7 @@ async function closeDoc() {
   const pdf = R.pdf;
   R = null;
   pagesEl.replaceChildren();
+  $('.coach')?.remove();
   reader.hidden = true;
   lib.hidden = false;
   pdf.destroy();
@@ -1162,14 +1191,14 @@ function setMode(mode, keep = true) {
   reader.dataset.mode = mode;
   clearSel();
   hideECur();
-  $$('.seg button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+  $$('.rbar .seg button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
   applyTheme();
   closeMenu();
   if (mode === 'pulpit') { requestWake(); startTick(); }
   else { releaseWake(); stopTick(); }
   if (a) requestAnimationFrame(() => { if (!R) return; for (const P of R.pages) P.top = P.el.offsetTop; const A = R.pages[a.i]; scroller.scrollTop = A.top + a.f * A.dh; });
 }
-$$('.seg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$$('.rbar .seg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 $('#pExit').onclick = () => setMode('prep');
 $('#pPage').onclick = e => pagesPop(e.currentTarget);
 
@@ -1305,30 +1334,287 @@ async function exportPdf() {
     const bytes = await out.save();
     busy();
     const name = R.doc.name.replace(/\.pdf$/i, '') + ' (필기).pdf';
-    offerFile(bytes, name);
+    offerFile(new Blob([bytes], { type: 'application/pdf' }), name, {
+      title: '필기 포함 PDF가 준비됐어요',
+      body: `${name} · ${(bytes.length / 1024).toFixed(0)}KB\n구글 드라이브나 파일 앱에 저장해 두면 다른 기기에서도 볼 수 있어요.`,
+    });
   } catch (e) {
     console.error(e);
     busy();
     toast('PDF를 만들지 못했어요', 3000);
   }
 }
-function offerFile(bytes, name) {
-  const blob = new Blob([bytes], { type: 'application/pdf' });
-  const file = new File([blob], name, { type: 'application/pdf' });
+// 만든 파일을 공유 시트(파일에 저장)나 다운로드로 내보낸다
+function offerFile(blob, name, { title, body, onSaved }) {
+  const file = new File([blob], name, { type: blob.type });
   const canShare = !!navigator.canShare?.({ files: [file] });
   const download = () => {
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+    onSaved?.();
   };
+  const share = () => navigator.share({ files: [file], title: name }).then(() => onSaved?.(), () => {});
   const buttons = [{ label: '닫기', value: 0 }];
-  if (canShare) buttons.push({ label: '다운로드', value: 0, onClick: download }, { label: '공유 · 파일에 저장', cls: 'primary', onClick: () => navigator.share({ files: [file], title: name }).catch(() => {}) });
+  if (canShare) buttons.push({ label: '다운로드', value: 0, onClick: download }, { label: '공유 · 파일에 저장', cls: 'primary', onClick: share });
   else buttons.push({ label: '다운로드', cls: 'primary', onClick: download });
-  dialog({ title: '필기 포함 PDF가 준비됐어요', body: `${name} · ${(bytes.length / 1024).toFixed(0)}KB\n구글 드라이브나 파일 앱에 저장해 두면 다른 기기에서도 볼 수 있어요.`, buttons });
+  dialog({ title, body, buttons });
 }
+
+// ═══════════════════ 설정·도움말·백업 ═══════════════════
+// 큰 안내 창(설정·도움말). body 는 DOM 조각을 만들어 넣는 함수
+function openSheet(title, body) {
+  closeSheet();
+  const s = document.createElement('div');
+  s.className = 'scrim sheet-scrim';
+  s.innerHTML = `<section class="sheet-card" role="dialog" aria-label="${title}">
+    <header><h3></h3><button class="icon-btn" aria-label="닫기"><svg class="i"><use href="#i-x"/></svg></button></header>
+    <div class="sheet-body"></div></section>`;
+  s.querySelector('h3').textContent = title;
+  s.querySelector('header button').onclick = closeSheet;
+  s.addEventListener('click', e => { if (e.target === s) closeSheet(); });
+  body(s.querySelector('.sheet-body'));
+  document.body.append(s);
+}
+function closeSheet() { $('.sheet-scrim')?.remove(); }
+function h(tag, cls, text) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text != null) el.textContent = text;
+  return el;
+}
+function row(icon, label, sub, fn, cls = '') {
+  const b = h('button', 'srow ' + cls);
+  b.innerHTML = `<svg class="i"><use href="${icon}"/></svg><span class="t"><b></b><small></small></span><svg class="i chev"><use href="#i-chev"/></svg>`;
+  b.querySelector('b').textContent = label;
+  b.querySelector('small').textContent = sub || '';
+  b.onclick = fn;
+  return b;
+}
+
+function openSettings() {
+  openSheet('설정', async body => {
+    const last = readLS('pn.lastBackup', 0);
+    body.append(
+      h('div', 'sgroup-t', '처음이라면'),
+      row('#i-book', '예시 원고로 사용법 보기', '연습장처럼 마음껏 써 볼 수 있는 원고', () => { closeSheet(); openSample(); }),
+      row('#i-help', '원고를 PDF로 만드는 법', '한글 · 워드 · Pages · 구글 문서', () => openPdfHowto()),
+      h('div', 'sgroup-t', '백업'),
+      row('#i-backup', '백업 만들기', last ? `마지막 백업 ${ago(last)}` : '아직 백업한 적이 없어요', () => { closeSheet(); makeBackup(); }),
+      row('#i-restore', '백업에서 복원', '새 기기로 옮기거나 되살릴 때', () => { closeSheet(); $('#restoreFile').click(); }),
+      h('p', 'snote', '원고와 필기는 이 기기 안에만 저장돼요. 기기를 바꾸거나 앱을 지우기 전에 백업 파일을 iCloud Drive나 구글 드라이브에 보관해 두세요.'),
+      h('div', 'sgroup-t', '정보'),
+      row('#i-lock', '개인정보 처리방침', '모으는 정보가 없어요 — 모두 기기 안에', () => openPrivacy()),
+      row('#i-info', '오픈소스 라이선스', 'pdf.js · pdf-lib · 글꼴', () => openLicenses()),
+    );
+    const ver = h('p', 'sver', `강단노트 ${APP_VERSION}`);
+    try { const e = await navigator.storage?.estimate?.(); if (e?.usage) ver.textContent += ` · 저장 공간 ${(e.usage / 1048576).toFixed(1)}MB 사용`; } catch {}
+    body.append(ver);
+  });
+}
+function openPdfHowto() {
+  openSheet('원고를 PDF로 만드는 법', body => {
+    body.append(h('p', 'slead', 'PDF에는 원고를 쓸 때 고른 글꼴이 그대로 담겨요. 그래서 어느 기기에서 열어도 쓰신 모양 그대로 보여요.'));
+    for (const [app, how] of [
+      ['한글', '파일 메뉴 → ‘PDF로 저장하기’'],
+      ['워드', '파일 → 다른 이름으로 저장 → 파일 형식 ‘PDF’'],
+      ['Pages', '파일 → 내보내기 → PDF'],
+      ['구글 문서', '파일 → 다운로드 → PDF 문서'],
+    ]) {
+      const r = h('div', 'howto');
+      r.append(h('b', '', app), h('span', '', how));
+      body.append(r);
+    }
+    body.append(
+      h('p', 'slead', '만든 PDF를 iCloud Drive나 구글 드라이브에 저장한 뒤, 서재에서 ‘원고 불러오기’를 누르고 고르면 돼요. 여러 개를 한 번에 골라도 돼요.'),
+      h('p', 'snote', '파일 이름을 ‘260921 주일예배 설교 - 제목’처럼 지으면 서재에 날짜 · 예배 · 제목이 나뉘어 정리돼요.'),
+    );
+  });
+}
+function openLicenses() {
+  openSheet('오픈소스 라이선스', body => {
+    for (const [name, lic, note] of [
+      ['PDF.js', 'Apache License 2.0', 'Mozilla Foundation — PDF를 화면에 그립니다.'],
+      ['pdf-lib', 'MIT License', 'Andrew Dillon — 필기를 PDF에 담습니다.'],
+      ['고운바탕 (Gowun Batang)', 'SIL Open Font License 1.1', 'The Gowun Batang Project Authors — 서재 제목 글꼴'],
+      ['Pretendard', 'SIL Open Font License 1.1', 'Kil Hyung-jin — 예시 원고 글꼴'],
+    ]) {
+      const r = h('div', 'lic');
+      r.append(h('b', '', name), h('span', '', lic), h('small', '', note));
+      body.append(r);
+    }
+    body.append(h('p', 'snote', '각 라이선스 전문은 앱과 함께 배포되는 vendor/ · fonts/ 폴더에 들어 있어요.'));
+  });
+}
+
+function openPrivacy() {
+  openSheet('개인정보 처리방침', body => {
+    for (const [t, d] of [
+      ['모으는 정보', '강단노트는 이름 · 이메일 · 기기 정보 · 사용 기록을 비롯해 어떤 개인정보도 모으지 않아요. 회원 가입과 로그인이 없어요.'],
+      ['원고와 필기', '불러온 원고 PDF와 필기는 이 기기의 앱 저장 공간에만 저장돼요. 서버로 보내지 않고, 개발자도 볼 수 없어요.'],
+      ['내보내기와 백업', '‘필기 포함 PDF 내보내기’와 ‘백업 만들기’는 사용자가 직접 고른 곳(파일 앱 · iCloud Drive · 구글 드라이브 등)에만 파일을 저장해요.'],
+      ['광고와 분석', '광고와 사용 분석 도구를 넣지 않았어요.'],
+      ['지우기', '서재에서 원고를 지우거나 앱을 삭제하면 그 기기에 저장된 원고와 필기가 함께 지워져요.'],
+    ]) body.append(h('b', 'ptitle', t), h('p', 'slead', d));
+  });
+}
+
+// ── 예시 원고 ──
+const SAMPLE_NAME = '예시 원고 - 강단노트 둘러보기.pdf';
+async function openSample() {
+  const have = (await idb.all('docs')).find(d => d.name === SAMPLE_NAME);
+  if (have) return openDoc(have.id);
+  busy('예시 원고를 준비하는 중…');
+  try {
+    const blob = await fetch('sample/sample.pdf').then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); });
+    await importFiles([new File([blob], SAMPLE_NAME, { type: 'application/pdf' })]);
+  } catch (e) {
+    console.error(e);
+    busy();
+    toast('예시 원고를 불러오지 못했어요');
+  }
+}
+
+// ── 첫 사용 안내(원고를 처음 열었을 때 한 번) ──
+function maybeCoach() {
+  if (readLS('pn.coached', false)) return;
+  const c = h('div', 'coach');
+  c.innerHTML = `<div><b>애플펜슬로 쓰고, 손가락으로 넘겨요.</b>
+    <span>오른쪽 위 ‘강단’을 누르면 화면을 탭해서 넘기는 설교용 화면이 돼요.</span></div>
+    <button class="btn primary">알겠어요</button>`;
+  c.querySelector('button').onclick = () => { writeLS('pn.coached', true); c.remove(); };
+  reader.append(c);
+}
+
+// ── 백업: 원고 PDF · 필기 · 목록을 zip 하나로(압축 없이 담아서 풀면 PDF가 그대로 보인다) ──
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t;
+})();
+function crc32(u8) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(files) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  const d = new Date();
+  const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); // UTF-8 이름
+    lh.setUint16(10, time, true); lh.setUint16(12, date, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true);
+    parts.push(new Uint8Array(lh.buffer), name, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(12, time, true); ch.setUint16(14, date, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true);
+    ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + size;
+  }
+  const cdSize = central.reduce((s, c) => s + c.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+async function unzip(buf) {
+  const u8 = new Uint8Array(buf), dv = new DataView(buf), dec = new TextDecoder(), out = new Map();
+  let e = u8.length - 22;
+  while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('not-zip');
+  let p = dv.getUint32(e + 16, true);
+  for (let i = dv.getUint16(e + 10, true); i > 0; i--) {
+    if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('not-zip');
+    const method = dv.getUint16(p + 10, true), size = dv.getUint32(p + 20, true);
+    const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nlen));
+    const start = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
+    let data = u8.slice(start, start + size);
+    // 사용자가 풀었다가 다시 묶은 zip(압축됨)도 받아 준다
+    if (method === 8) data = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    else if (method !== 0) throw new Error('zip-method');
+    out.set(name, data);
+    p += 46 + nlen + xlen + clen;
+  }
+  return out;
+}
+async function makeBackup() {
+  busy('백업 파일을 만드는 중…');
+  try {
+    const [docs, inks] = await Promise.all([idb.all('docs'), idb.all('ink')]);
+    if (!docs.length) { busy(); toast('백업할 원고가 아직 없어요'); return; }
+    const enc = new TextEncoder();
+    const files = [{ name: 'manifest.json', data: enc.encode(JSON.stringify({ app: 'pulpit-notes', format: 1, version: APP_VERSION, created: Date.now(), docs })) }];
+    for (const d of docs) {
+      const f = await idb.get('files', d.id);
+      if (f) files.push({ name: `pdf/${d.id}.pdf`, data: new Uint8Array(f.data) });
+    }
+    for (const k of inks) files.push({ name: `ink/${k.id}.json`, data: enc.encode(JSON.stringify(k)) });
+    const blob = zipStore(files);
+    const t = new Date(), stamp = `${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, '0')}${String(t.getDate()).padStart(2, '0')}`;
+    busy();
+    offerFile(blob, `강단노트 백업 ${stamp}.zip`, {
+      title: '백업 파일이 준비됐어요',
+      body: `원고 ${docs.length}개 · ${(blob.size / 1048576).toFixed(1)}MB\niCloud Drive나 구글 드라이브에 저장해 두세요. 새 기기에서는 설정 → 백업에서 복원으로 되살릴 수 있어요.`,
+      onSaved: () => { writeLS('pn.lastBackup', Date.now()); renderFoot(); },
+    });
+  } catch (e) {
+    console.error(e);
+    busy();
+    toast('백업 파일을 만들지 못했어요', 3000);
+  }
+}
+async function restoreBackup(file) {
+  busy('백업을 되살리는 중…');
+  try {
+    const entries = await unzip(await file.arrayBuffer());
+    const raw = entries.get('manifest.json');
+    const man = raw && JSON.parse(new TextDecoder().decode(raw));
+    if (man?.app !== 'pulpit-notes') throw new Error('not-backup');
+    let added = 0, updated = 0, kept = 0;
+    for (const d of man.docs) {
+      const pdf = entries.get(`pdf/${d.id}.pdf`);
+      if (!pdf) continue;
+      const inkRaw = entries.get(`ink/${d.id}.json`);
+      const ink = inkRaw ? JSON.parse(new TextDecoder().decode(inkRaw)) : null;
+      const cur = await idb.get('docs', d.id);
+      if (!cur) {
+        await idb.put('files', { id: d.id, data: pdf.buffer });
+        if (ink) await idb.put('ink', ink);
+        await idb.put('docs', d);
+        added++;
+        continue;
+      }
+      // 같은 원고가 이미 있으면 필기가 더 최근인 쪽을 남긴다
+      const curInk = await idb.get('ink', d.id);
+      if (ink && (ink.updated || 0) > (curInk?.updated || 0)) {
+        await idb.put('ink', ink);
+        await idb.put('docs', { ...cur, inkCount: d.inkCount });
+        updated++;
+      } else kept++;
+    }
+    busy();
+    await renderLibrary();
+    const msg = [added && `새 원고 ${added}개`, updated && `필기 ${updated}개 갱신`, kept && `그대로 ${kept}개`].filter(Boolean).join(' · ');
+    toast(msg ? `복원했어요 — ${msg}` : '복원할 원고가 없었어요', 3200);
+  } catch (e) {
+    console.error(e);
+    busy();
+    toast(e?.message === 'not-backup' || e?.message === 'not-zip' ? '강단노트 백업 파일이 아니에요' : '백업을 되살리지 못했어요', 3200);
+  }
+}
+$('#restoreFile').onchange = () => { const f = $('#restoreFile').files[0]; $('#restoreFile').value = ''; if (f) restoreBackup(f); };
 
 // ═══════════════════ 키보드·페달 ═══════════════════
 addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('.sheet-scrim')) { closeSheet(); return; }
   if (!R || $('.scrim') || e.target.matches?.('input,textarea')) return;
   const mod = e.metaKey || e.ctrlKey;
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
