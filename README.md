@@ -34,7 +34,7 @@
 | `vendor/` | pdf.js 4.10.38(legacy 빌드)·pdf-lib 1.17.1 — CDN 없이 동작하도록 동봉 |
 | `fonts/` | 고운바탕 400·700 woff2(한글 11,172자 서브셋, SIL OFL) + 라이선스 전문. 외부 글꼴 요청 없음 |
 | `sample/` | 예시 원고 `sample.pdf`(Pretendard, OFL)와 원본 `sample-source.html` |
-| `privacy.html` · `support.html` | 앱스토어 등록용 개인정보 처리방침 · 지원 페이지 |
+| `privacy.html` · `support.html` | 개인정보 처리방침 · 지원 페이지 원본. **앱스토어에 적은 주소는 레브랩 사이트 사본**(`~/Claude/levlab/public/gangdannote/{support,privacy}/index.html`, www.levlab.co.kr/gangdannote/…) — 고치면 두 곳 다 반영(사본은 경로를 `/gangdannote/…` 절대 경로로) |
 
 - 예시 원고 다시 만들기(내용을 고친 뒤):
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-pdf-header-footer --print-to-pdf=sample/sample.pdf sample/sample-source.html`

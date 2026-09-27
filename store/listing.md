@@ -14,9 +14,9 @@
 | 주 카테고리 | 생산성 |
 | 보조 카테고리 | 참고 |
 | 연령 등급 | 4+ (설문 항목 모두 '없음') |
-| 지원 URL | https://cleveranawim-source.github.io/pulpit-notes/support.html |
-| 개인정보 처리방침 URL | https://cleveranawim-source.github.io/pulpit-notes/privacy.html |
-| 마케팅 URL (선택) | https://cleveranawim-source.github.io/pulpit-notes/ |
+| 지원 URL | https://www.levlab.co.kr/gangdannote/support |
+| 개인정보 처리방침 URL | https://www.levlab.co.kr/gangdannote/privacy |
+| 마케팅 URL (선택) | 비워 둠 |
 | 저작권 | 2026 Yeol Studio |
 | 앱 개인정보 | **데이터를 수집하지 않음** |
 | 암호화 수출 규정 | Info.plist에 '해당 없음'으로 넣어 둠(업로드 때 따로 묻지 않음) |
