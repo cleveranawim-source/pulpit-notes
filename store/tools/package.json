@@ -1,0 +1,6 @@
+{
+  "name": "pulpit-notes-store-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": { "puppeteer-core": "^25.12.0" }
+}

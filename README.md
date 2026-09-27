@@ -68,6 +68,18 @@
 - 아이콘·실행 화면: `ios/App/App/Assets.xcassets` (1024 아이콘은 알파 없이).
 - 다른 앱에서 온 파일 이름은 NFD(자모 분리)라 `normalize('NFC')` 필수.
 
+## 스토어 스크린숏 · 등록 자료 (`store/`)
+
+- `listing.md`: App Store Connect에 붙여 넣을 이름·부제·설명·키워드·심사 메모(글자 수 확인 포함).
+- `screenshots/raw/`: 아이패드 13인치(2064×2752) 원본, `screenshots/appstore/`: 제목을 얹은 스토어용 6장.
+- `demo/`: 스크린숏용 **가상** 설교 원고 16편(원본 HTML은 `demo-src/`, 크롬 `--print-to-pdf`로 만듦).
+- 다시 찍기(개발 서버 5178을 켠 상태에서):
+  1. 고운바탕 TTF 두 개를 `store/tools/cache/`에 둔다(github.com/google/fonts `ofl/gowunbatang`).
+  2. `cd store/tools && npm i`
+  3. `node textpos.mjs "../demo/260906 주일예배 설교 - 빈 그물에 다시 내리는 손.pdf" cache/rich-text.json && python3 mkink.py` — 글자 위치에 맞춰 필기 획 생성
+  4. `node shots.mjs` — 헤드리스 크롬으로 서재·준비·강단·어둡게·고르기·설정 6장(시계는 주일 오전 10:52로 고정)
+  5. `python3 compose.py` — 스토어 이미지 합성
+
 ## 로컬 실행
 
 ```bash
