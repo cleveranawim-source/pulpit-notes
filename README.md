@@ -21,6 +21,7 @@
 
 6. 서재 오른쪽 위 **설정**: 예시 원고(사용법 겸 연습장) · PDF 만드는 법 · **백업 만들기 / 백업에서 복원** · 개인정보 처리방침 · 오픈소스 라이선스.
    서재 카드 ⋯ → 제목 바꾸기 · 지우기. 정렬은 최근 연 순 / 설교 날짜 순.
+   **여러 원고 지우기**: 서재의 ‘고르기’(또는 카드를 길게 누르기) → 탭으로 고르고 아래 막대에서 지우기. ‘지난 설교 N편’은 파일 이름 날짜가 오늘보다 앞선 원고를 한 번에 고른다.
 
 **여백 줄여 크게 보기**(기본 켬): 불러올 때 모든 쪽의 글자 영역을 재서 바깥 여백을 잘라 낸다 → 같은 화면에서 글씨가 약 1.3배 커진다.
 
@@ -61,7 +62,7 @@
 | 다른 앱에서 받기 | — | Info.plist `CFBundleDocumentTypes`(PDF·zip) → `appUrlOpen` → Filesystem.readFile |
 | 오프라인 | 서비스워커 | 앱 안에 파일이 들어 있음(서비스워커 안 씀) |
 
-- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.0(1) · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
+- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.1(2) — 1.0.0(1)은 2026-09-27 심사 제출분 · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
 - 빌드: `npm run ios`(www/ 모으기 + cap sync) → Xcode에서 `ios/App/App.xcodeproj` 열기 → Product › Archive.
   시뮬레이터: `xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -derivedDataPath ios/DerivedData build CODE_SIGNING_ALLOWED=NO`.
 - JS 콘솔 보기: `xcrun simctl launch --console-pty <기기> com.yeolstudio.pulpitnotes` (⚡️ 로그).

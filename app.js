@@ -25,7 +25,7 @@ const PEN_COLORS = ['#1F1B16', '#D23B2E', '#2456C8', '#1F8A4C'];
 const HL_COLORS = ['#FFE45C', '#A8E890', '#FFB3D1', '#A9DBFF'];
 const TARGETS = [0, 5, 10, 15, 20, 25, 30, 40];
 const THEMES = ['light', 'sepia', 'dark'];
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 const SUPPORT_EMAIL = 'lovewords10@gmail.com';
 
 const savedSettings = readLS('pn.settings', {});
@@ -159,9 +159,11 @@ async function renderLibrary() {
     c.className = 'card';
     c.style.animationDelay = Math.min(n, 12) * 30 + 'ms';
     c.innerHTML = `
-      <button class="sheet" aria-label="열기"><img alt=""></button>
+      <button class="sheet" aria-label="열기"><img alt="" draggable="false"><span class="pick"><svg class="i"><use href="#i-check"/></svg></span></button>
       <button class="more" aria-label="더 보기"><svg class="i"><use href="#i-more"/></svg></button>
       <div class="meta"></div><h3></h3><div class="sub"></div>`;
+    c.dataset.id = d.id;
+    c.classList.toggle('picked', !!libSel?.has(d.id));
     c.querySelector('img').src = d.thumb || '';
     if (d.inkCount) c.querySelector('.sheet').insertAdjacentHTML('beforeend', `<span class="badge"><svg class="i"><use href="#i-pen"/></svg>${d.inkCount}</span>`);
     const meta = c.querySelector('.meta');
@@ -169,13 +171,96 @@ async function renderLibrary() {
     if (d.kind) meta.append(document.createTextNode((d.date ? '· ' : '') + d.kind));
     c.querySelector('h3').textContent = d.title;
     c.querySelector('.sub').textContent = [`${d.pages}쪽`, d.tag, d.opened ? '최근 ' + ago(d.opened) : '새 원고'].filter(Boolean).join(' · ');
-    c.querySelector('.sheet').onclick = () => openDoc(d.id);
-    c.querySelector('h3').onclick = () => openDoc(d.id);
+    const tapCard = () => {
+      if (longPressed) { longPressed = false; return; } // 길게 누른 뒤 따라오는 탭은 무시
+      if (libSel) togglePick(c, d.id); else openDoc(d.id);
+    };
+    c.querySelector('.sheet').onclick = tapCard;
+    c.querySelector('h3').onclick = tapCard;
     c.querySelector('.more').onclick = e => cardMenu(e.currentTarget, d);
+    watchLongPress(c, d.id);
     return c;
   }));
+  $('#btnSelect').hidden = !docsCache.length || !!libSel;
+  updateLibBar();
   renderFoot();
 }
+
+// ── 여러 원고 골라서 지우기 ──
+let libSel = null; // 고르기 중일 때 고른 원고 id
+// 길게 누르면 서재를 다시 그리므로 카드가 바뀐다 → '방금 길게 눌렀음'은 카드가 아니라 여기에 둔다
+let longPressed = false;
+function setLibSelect(on, firstId) {
+  libSel = on ? new Set(firstId ? [firstId] : []) : null;
+  if (!on) longPressed = false;
+  lib.classList.toggle('selecting', !!libSel);
+  $('#libBar').hidden = !libSel;
+  renderLibrary();
+}
+function togglePick(card, id) {
+  libSel.has(id) ? libSel.delete(id) : libSel.add(id);
+  card.classList.toggle('picked', libSel.has(id));
+  updateLibBar();
+}
+// 설교 날짜(파일 이름의 260921)가 오늘보다 앞선 원고
+const todayStr = () => { const t = new Date(); return `${t.getFullYear()}.${String(t.getMonth() + 1).padStart(2, '0')}.${String(t.getDate()).padStart(2, '0')}`; };
+const pastDocs = () => docsCache.filter(d => d.date && d.date < todayStr());
+function visibleIds() { return $$('.card', grid).map(c => c.dataset.id); }
+function updateLibBar() {
+  if (!libSel) return;
+  const n = libSel.size, vis = visibleIds();
+  $('#lbCnt').textContent = n ? `${n}편 고름` : '지울 원고를 고르세요';
+  $('#lbDel').disabled = !n;
+  $('#lbDel').textContent = n ? `${n}편 지우기` : '지우기';
+  $('#lbAll').textContent = vis.length && vis.every(id => libSel.has(id)) ? '모두 해제' : '모두 고르기';
+  const past = pastDocs();
+  $('#lbPast').hidden = !past.length;
+  $('#lbPast').textContent = `지난 설교 ${past.length}편`;
+}
+function watchLongPress(card, id) {
+  let timer = 0, x = 0, y = 0;
+  const stop = () => { clearTimeout(timer); timer = 0; };
+  card.addEventListener('pointerdown', e => {
+    if (e.target.closest('.more')) return;
+    x = e.clientX; y = e.clientY; stop();
+    longPressed = false;
+    timer = setTimeout(() => {
+      timer = 0; longPressed = true;
+      if (!libSel) setLibSelect(true, id);
+      else { const c = $(`.card[data-id="${id}"]`, grid); if (c && !libSel.has(id)) togglePick(c, id); }
+      navigator.vibrate?.(10);
+    }, 480);
+  });
+  card.addEventListener('pointermove', e => { if (timer && Math.hypot(e.clientX - x, e.clientY - y) > 10) stop(); });
+  card.addEventListener('pointerup', () => { stop(); if (longPressed) setTimeout(() => { longPressed = false; }, 400); });
+  card.addEventListener('pointercancel', stop);
+  card.addEventListener('contextmenu', e => e.preventDefault());
+}
+async function deleteSelected() {
+  const ids = [...(libSel || [])];
+  if (!ids.length) return;
+  const titles = docsCache.filter(d => libSel.has(d.id)).map(d => d.title);
+  const list = titles.slice(0, 3).map(t => `「${t}」`).join(', ') + (titles.length > 3 ? ` 외 ${titles.length - 3}편` : '');
+  const noBackup = !readLS('pn.lastBackup', 0);
+  if (!await ask(`원고 ${ids.length}편을 지울까요?`,
+    `${list}\n원고와 거기에 한 필기가 모두 지워지고, 되돌릴 수 없어요.${noBackup ? '\n필요하면 먼저 설정 → 백업 만들기로 보관해 두세요.' : ''}`,
+    `${ids.length}편 지우기`, true)) return;
+  busy(`원고 ${ids.length}편을 지우는 중…`);
+  try {
+    for (const id of ids) await Promise.all([idb.del('docs', id), idb.del('files', id), idb.del('ink', id)]);
+  } finally { busy(); }
+  setLibSelect(false);
+  toast(`원고 ${ids.length}편을 지웠어요`);
+}
+$('#btnSelect').onclick = () => setLibSelect(true);
+$('#lbDone').onclick = () => setLibSelect(false);
+$('#lbDel').onclick = deleteSelected;
+$('#lbAll').onclick = () => {
+  const vis = visibleIds(), all = vis.every(id => libSel.has(id));
+  vis.forEach(id => all ? libSel.delete(id) : libSel.add(id));
+  renderLibrary();
+};
+$('#lbPast').onclick = () => { pastDocs().forEach(d => libSel.add(d.id)); renderLibrary(); };
 function ago(t) {
   const m = (Date.now() - t) / 60000;
   if (m < 1) return '방금';
@@ -1664,6 +1749,7 @@ $('#restoreFile').onchange = () => { const f = $('#restoreFile').files[0]; $('#r
 // ═══════════════════ 키보드·페달 ═══════════════════
 addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('.sheet-scrim')) { closeSheet(); return; }
+  if (e.key === 'Escape' && libSel && !R && !$('.scrim')) { setLibSelect(false); return; }
   if (!R || $('.scrim') || e.target.matches?.('input,textarea')) return;
   const mod = e.metaKey || e.ctrlKey;
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }

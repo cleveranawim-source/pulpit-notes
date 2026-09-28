@@ -1,6 +1,6 @@
 {
   "name": "pulpit-notes",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "강단노트 — 설교 원고 PDF 리더 (웹 + iPad 앱)",
   "type": "module",
