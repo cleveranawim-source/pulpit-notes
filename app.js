@@ -539,10 +539,12 @@ function layout(anchor) {
 function updateVisible() {
   if (!R) return;
   const top = scroller.scrollTop, H = scroller.clientHeight;
+  // 확대하면 쪽 그림이 커서 멀리 지나간 쪽을 일찍 비운다(평소엔 되돌아갈 때 다시 그리지 않게 넉넉히)
+  const [back, ahead] = (settings.zoom || 1) > 1 ? [1, 2] : [2, 3];
   for (const P of R.pages) {
     const b = P.top + P.dh;
     if (b > top - H * 0.5 && P.top < top + H * 1.6) ensurePage(P);
-    else if (b < top - H * 2 || P.top > top + H * 3) releasePage(P);
+    else if (b < top - H * back || P.top > top + H * ahead) releasePage(P);
   }
 }
 function ensurePage(P) {
@@ -555,12 +557,21 @@ function ensurePage(P) {
   if (P.key === key) return;
   P.key = key;
   const k = P.s * dpr;
-  P.ink.width = Math.round(P.dw * dpr);
-  P.ink.height = Math.round(P.dh * dpr);
-  P.ictx = P.ink.getContext('2d');
-  P.ictx.setTransform(...inkTransform(P));
+  P.ink.width = P.ink.height = 0; P.ictx = null; // 필기 캔버스는 필기가 있는 쪽에만(아래 inkReady)
   redrawInk(P);
   renderPdf(P, key, k, c);
+}
+// 필기 캔버스(원고와 같은 크기)는 필기가 있거나 막 쓰기 시작한 쪽에만 만든다 —
+// 빈 쪽마다 큰 투명 캔버스를 곱하기 합성으로 얹으면 메모리도 그래픽 일도 두 배였다
+function inkReady(P) {
+  if (P.key == null) return false; // 화면 밖이라 아직 그리지 않은 쪽
+  if (!P.ictx) {
+    P.ink.width = Math.round(P.dw * P.dpr);
+    P.ink.height = Math.round(P.dh * P.dpr);
+    P.ictx = P.ink.getContext('2d');
+    P.ictx.setTransform(...inkTransform(P));
+  }
+  return true;
 }
 async function renderPdf(P, key, k, c) {
   P.task?.cancel();
@@ -662,10 +673,10 @@ function drawStroke(ctx, S, P) {
 const thumbDirty = new Set();
 function redrawInk(P, skip) {
   if (P.thumb && !skip) { thumbDirty.add(P); requestAnimationFrame(() => { for (const Q of thumbDirty) thumbInk(Q); thumbDirty.clear(); }); }
-  const ctx = P.ictx;
-  if (!ctx) return;
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, P.ink.width, P.ink.height); ctx.restore();
   const list = R.ink.pages[P.i];
+  if (!P.ictx && !(list?.length && inkReady(P))) return;
+  const ctx = P.ictx;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, P.ink.width, P.ink.height); ctx.restore();
   if (!list?.length) return;
   for (const S of list) if (S.t === 'hl' && !skip?.has(S)) drawStroke(ctx, S, P); // 형광펜은 늘 펜 아래
   for (const S of list) if (S.t !== 'hl' && !skip?.has(S)) drawStroke(ctx, S, P);
@@ -731,7 +742,7 @@ pagesEl.addEventListener('pointerdown', e => {
   const el = e.target.closest('.page');
   if (!el) return;
   const P = R.pages[+el.dataset.i];
-  if (!P.ictx) return;
+  if (!inkReady(P)) return;
   e.preventDefault();
   try { e.target.setPointerCapture(e.pointerId); } catch {}
   const r = el.getBoundingClientRect(), c = cropBox();
@@ -1743,6 +1754,9 @@ function turn(dir) {
 // 두 가지 방식: 'down' 타이머(정한 시간에서 거꾸로) · 'up' 스톱워치(0부터 흘러감).
 // 어느 쪽이든 정한 시간의 80%에 주황, 넘으면 빨강으로 알린다.
 const T = Object.assign({ start: 0, acc: 0, running: false }, readLS('pn.timer', {}));
+let wakeLock = null;
+let lastTouch = Date.now(); // 강단 꺼짐 방지를 풀지 판단할 마지막 손길
+for (const t of ['pointerdown', 'keydown']) document.addEventListener(t, () => { lastTouch = Date.now(); }, { capture: true, passive: true });
 if (!(settings.target >= 1)) settings.target = 25;
 let tickTimer = 0;
 const saveTimerState = () => writeLS('pn.timer', { start: T.start, acc: T.acc, running: T.running });
@@ -1768,6 +1782,9 @@ function tick() {
   setText($('#pTimerTxt'), txt);
   setText($('#pTimerSub'), sub);
   setClass($('#pTimer'), 'pill timer' + (state ? ' ' + state : ''));
+  // 설교가 끝나고 켜 둔 채 두면 화면이 밤새 켜져 있지 않게: 타이머가 멈췄거나 30분 넘게 지났는데
+  // 15분 동안 손대지 않으면 꺼짐 방지를 푼다(화면을 톡 치면 다시 켜진다)
+  if (wakeLock && (!T.running || e > tgt + 30 * 60e3) && Date.now() - lastTouch > 15 * 60e3) releaseWake();
 }
 function toggleTimer() {
   if (T.running) { T.acc += Date.now() - T.start; T.running = false; }
@@ -1811,7 +1828,6 @@ $('#pTarget').onclick = e => openMenu(e.currentTarget, m => {
 });
 
 // ── 화면 꺼짐 방지 ──
-let wakeLock = null;
 async function requestWake() {
   if (wakeLock || R?.mode !== 'pulpit') return updateWake();
   const keep = NATIVE && plugin('KeepAwake');

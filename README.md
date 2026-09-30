@@ -55,6 +55,9 @@
 - 필기 저장 형식: 쪽마다 획 배열 `{t:'pen'|'hl', c:색, w:굵기(쪽 폭 비율), p:[x,y,압력,…](쪽 크기로 정규화)}`.
   그래서 여백 자르기·가로세로 전환·확대와 무관하게 제자리에 붙는다.
 - 화면: 쪽마다 PDF 캔버스 + 필기 캔버스(`mix-blend-mode: multiply`, 형광펜을 먼저·펜을 나중에 그려 글씨가 가려지지 않음).
+  - 필기 캔버스는 **필기가 있거나 막 쓰기 시작한 쪽에만** 원고 크기로 만든다(`inkReady`, 없는 쪽은 0×0) — 빈 쪽마다 큰 투명 캔버스를 곱하기 합성으로 얹어 메모리·그래픽 일이 두 배였다(원고 열어 둔 상태 약 98MB → 49MB). 확대 중에는 지나간 쪽을 화면 1장 뒤·2장 앞 밖에서 비움(평소 2·3장).
+  - 강단 꺼짐 방지: 타이머가 멈췄거나 목표보다 30분 넘게 지났는데 15분 동안 손길(`pointerdown`·`keydown`)이 없으면 풀고, 탭하면 다시(`tick` 끝).
+  - 발열 측정은 시뮬레이터로는 그래픽·화면 전력이 안 보인다 → 실기기 Xcode Power Profiler(`xcrun xctrace record --template "Power Profiler" --device …`)로.
   화면 근처 쪽만 그리고 먼 쪽 캔버스는 비운다(아이패드 캔버스 메모리 한도 대비).
 - 부분 지우개는 픽셀을 칠해 지우지 않고 **획을 잘라 조각 획으로 바꾼다**(지우개 원과 선분의 교점 계산).
   그래서 내보낸 PDF도 벡터 그대로이고, 되돌리기는 쪽 단위 스냅숏(`{t:'snap', before, after}`)으로 한다.
@@ -72,7 +75,7 @@
 | 원고 불러오기 · 백업 복원 | `<input type=file>` | 자체 플러그인 `FolderPicker`(`ios/App/App/FolderPicker.swift`, `PulpitViewController` 에서 등록) — 원본 자리에서 열어(asCopy:false) 조율된 읽기로 내려받고 임시 폴더로 복사해 넘김. **시작 폴더(`directoryURL`)는 일부러 주지 않는다**: 그래야 선택 창이 이 앱에서 마지막으로 보던 폴더를 스스로 기억해 연다(앱을 껐다 켜도). 구글 드라이브는 파일마다 보관 칸을 따로 두어 '파일이 든 폴더' 경로가 실제 폴더가 아니고, 파일 주소를 주면 '최근 항목'으로 열려서 1.0.1(4)에서 뺐다. 실기기 확인: 선택 창 자체 기억도 구글 드라이브 폴더는 되살리지 못한다(나의 iPad · iCloud 만) → 설명서 1·10장에 '파일 앱 즐겨찾기' 안내 |
 | 오프라인 | 서비스워커 | 앱 안에 파일이 들어 있음(서비스워커 안 씀) |
 
-- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.1(5) — 1.0.0(1)은 2026-09-27 심사 제출분 · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
+- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.1(6) — 1.0.0(1)은 2026-09-27 심사 제출분 · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
 - 빌드: `npm run ios`(www/ 모으기 + cap sync) → Xcode에서 `ios/App/App.xcodeproj` 열기 → Product › Archive.
   시뮬레이터: `xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -derivedDataPath ios/DerivedData build CODE_SIGNING_ALLOWED=NO`.
 - JS 콘솔 보기: `xcrun simctl launch --console-pty <기기> com.yeolstudio.pulpitnotes` (⚡️ 로그).
