@@ -9,10 +9,12 @@ W, H = 2064, 2752
 ITEMS = [
     ('1-library', '설교 원고를 한 서재에', 'PDF로 만든 원고가 날짜와 예배별로 정리돼요', 'light'),
     ('2-prep', '애플펜슬로 표시하며 준비하고', '밑줄 · 형광펜 · 동그라미, 손바닥이 닿아도 괜찮아요', 'light'),
-    ('3-pulpit', '강단에서는 탭 한 번으로', '이어 읽을 자리 표시 · 설교 타이머 · 화면 꺼짐 방지', 'light'),
-    ('4-pulpit-dark', '어두운 예배당에서도 편안하게', '밝게 · 종이 · 어둡게, 눈에 맞는 화면으로', 'dark'),
-    ('5-select', '고르고, 옮기고, 지우고', '올가미로 둘러싼 필기를 끌어서 옮겨요', 'light'),
-    ('6-settings', '원고는 내 아이패드에만', '로그인도 서버도 없이, 백업은 파일 하나로', 'light'),
+    ('3-pulpit', '강단에서는 탭 한 번으로', '이어 읽을 자리 표시 · 지금 시각 · 화면 꺼짐 방지', 'light'),
+    ('4-timer', '타이머도, 스톱워치도', '거꾸로 세거나 흘러간 시간을 세고, 넘으면 빨간색으로', 'light'),
+    ('5-thumbs', '쪽 미리보기로 한눈에', '필기까지 보이는 목록, 누르면 그 쪽으로 바로', 'light'),
+    ('6-pulpit-dark', '어두운 예배당에서도 편안하게', '밝게 · 종이 · 어둡게, 눈에 맞는 화면으로', 'dark'),
+    ('7-select', '고르고, 옮기고, 돌리고', '올가미로 둘러싼 필기를 옮기고 크기 · 방향까지', 'light'),
+    ('8-settings', '원고는 내 아이패드에만', '로그인도 서버도 없이, 백업은 파일 하나로', 'light'),
 ]
 THEME = {'light': ('#F4EFE6', '#2A241D', '#6E6356', '#EBE3D4'), 'dark': ('#1B1917', '#F4EFE6', '#BDB3A5', '#2A2724')}
 
@@ -22,6 +24,8 @@ def rounded(size, r):
     return m
 
 os.makedirs(os.path.join(SHOTS, 'appstore'), exist_ok=True)
+for f in os.listdir(os.path.join(SHOTS, 'appstore')):
+    if f.endswith('.png'): os.remove(os.path.join(SHOTS, 'appstore', f))
 for k, (name, title, sub, th) in enumerate(ITEMS, 1):
     bg, ink, ink2, glow = THEME[th]
     can = Image.new('RGB', (W, H), bg)

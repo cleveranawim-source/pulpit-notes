@@ -377,7 +377,7 @@ async function analyze(pdf, onPage) {
   return { crop, thumb };
 }
 
-// 앱에서는 파일 앱 선택 창을 직접 띄워 마지막으로 고른 폴더에서 열리게 한다(ios/App/App/FolderPicker.swift).
+// 앱에서는 파일 앱 선택 창을 직접 띄운다(ios/App/App/FolderPicker.swift) — 선택 창이 마지막으로 보던 폴더에서 열린다.
 // 웹의 파일 입력 창은 시작 폴더를 정할 수 없어서, 웹판과 플러그인이 없을 때만 쓴다.
 async function pickFiles(kind) {
   const P = plugin('FolderPicker');
