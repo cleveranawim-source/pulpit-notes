@@ -1575,6 +1575,11 @@ function menuItem(icon, label, fn, cls = '', right) {
   return b;
 }
 $('#btnMenu').onclick = e => openMenu(e.currentTarget, m => {
+  // 강단 화면에는 위쪽 막대에 서재 버튼을 두지 않는다(설교 중 잘못 눌러 원고가 닫히지 않게) — 메뉴 안에서만
+  if (R.mode === 'pulpit') {
+    m.append(menuItem('#i-back', '서재로 돌아가기', closeDoc));
+    m.append(document.createElement('hr'));
+  }
   m.append(Object.assign(document.createElement('div'), { className: 'lbl', textContent: '화면' }));
   const th = document.createElement('div');
   th.className = 'themes';
