@@ -34,7 +34,7 @@ if (savedSettings.hlW == null && savedSettings.hlSize != null) savedSettings.hlW
 delete savedSettings.penSize; delete savedSettings.hlSize;
 const settings = Object.assign({
   tool: 'pen', penColor: PEN_COLORS[1], hlColor: HL_COLORS[0], penW: 0.0036, hlW: 0.026, eraseR: 0.012, eraseMode: 'part',
-  finger: false, themePrep: 'light', themePulpit: 'light', target: 25, sort: 'recent',
+  finger: false, themePrep: 'light', themePulpit: 'light', target: 25, timerMode: 'down', sort: 'recent',
   zoom: 1, thumbs: false, pulpitInk: false,
 }, savedSettings);
 function readLS(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
@@ -1621,7 +1621,8 @@ function turn(dir) {
 }
 
 // ── 시계·설교 타이머 ──
-// 설교 시간을 분으로 정하면 남은 시간이 줄어드는 카운트다운. 0분(시간 없음)이면 흐른 시간만 센다.
+// 두 가지 방식: 'down' 타이머(정한 시간에서 거꾸로) · 'up' 스톱워치(0부터 흘러감).
+// 어느 쪽이든 정한 시간의 80%에 주황, 넘으면 빨강으로 알린다.
 const T = Object.assign({ start: 0, acc: 0, running: false }, readLS('pn.timer', {}));
 if (!(settings.target >= 1)) settings.target = 25;
 let tickTimer = 0;
@@ -1635,9 +1636,9 @@ function tick() {
   $('#pClock').textContent = `${now.getHours() < 12 ? '오전' : '오후'} ${(now.getHours() % 12) || 12}:${String(now.getMinutes()).padStart(2, '0')}`;
   const e = elapsed(), tgt = settings.target * 60000, prog = $('#tprog'), idle = !T.running && e === 0;
   $('#pTargetTxt').textContent = `${settings.target}분`;
-  const left = tgt - e, f = e / tgt;
-  const txt = left >= 0 ? mmss(left + 999) : '+' + mmss(-left); // 남은 시간은 올림으로(25:00부터)
-  const sub = idle ? '시작' : !T.running ? '멈춤' : left < 0 ? '넘음' : '남음';
+  const left = tgt - e, f = e / tgt, up = settings.timerMode === 'up';
+  const txt = up ? mmss(e) : left >= 0 ? mmss(left + 999) : '+' + mmss(-left); // 남은 시간은 올림으로(25:00부터)
+  const sub = idle ? '시작' : !T.running ? '멈춤' : left < 0 ? '넘음' : up ? '지남' : '남음';
   const state = idle ? '' : !T.running ? 'paused' : f >= 1 ? 'over' : f >= 0.8 ? 'warn' : 'run';
   prog.style.width = Math.min(100, f * 100) + '%';
   prog.className = 'tprog pulpit-only' + (f >= 1 ? ' over' : f >= 0.8 ? ' warn' : '');
@@ -1653,9 +1654,11 @@ function toggleTimer() {
 function resetTimer() { T.acc = 0; T.running = false; T.start = 0; saveTimerState(); tick(); }
 $('#pTimer').onclick = toggleTimer;
 $('#pTarget').onclick = e => openMenu(e.currentTarget, m => {
-  m.append(h('div', 'lbl', '설교 타이머 — 정한 시간에서 거꾸로 세어요'));
+  const lbl = h('div', 'lbl');
+  m.append(lbl);
   const box = h('div', 'tpop');
-  box.innerHTML = `<div class="dial"><button data-d="-5">−5</button><button data-d="-1">−1</button><b></b><button data-d="1">+1</button><button data-d="5">+5</button></div>
+  box.innerHTML = `<div class="tmode"><button data-m="down"><b>타이머</b><small>거꾸로 세기</small></button><button data-m="up"><b>스톱워치</b><small>흘러간 시간</small></button></div>
+    <p class="cap"></p><div class="dial"><button data-d="-5">−5</button><button data-d="-1">−1</button><b></b><button data-d="1">+1</button><button data-d="5">+5</button></div>
     <div class="chips"></div><div class="row"><button class="btn" data-a="reset"><svg class="i"><use href="#i-reset"/></svg>리셋</button><button class="btn primary" data-a="go"></button></div><p class="note"></p>`;
   const chips = box.querySelector('.chips');
   for (const v of [10, 15, 20, 25, 30, 35, 40, 45, 50, 60]) {
@@ -1665,12 +1668,19 @@ $('#pTarget').onclick = e => openMenu(e.currentTarget, m => {
     chips.append(c);
   }
   const show = () => {
+    const up = settings.timerMode === 'up';
+    lbl.textContent = up ? '스톱워치 — 0부터 흘러간 시간을 세어요' : '타이머 — 정한 시간에서 거꾸로 세어요';
+    box.querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === (up ? 'up' : 'down')));
+    box.querySelector('.cap').textContent = up ? '알려 줄 시간 — 이 시간이 지나면 빨간색' : '설교 시간 — 여기서부터 거꾸로';
     box.querySelector('.dial b').innerHTML = `${settings.target}<small>분</small>`;
     chips.querySelectorAll('button').forEach(c => c.classList.toggle('on', +c.dataset.v === settings.target));
     box.querySelector('[data-a=go]').textContent = T.running ? '멈춤' : elapsed() ? '이어서' : '시작';
-    box.querySelector('.note').textContent = '위쪽 시간을 탭해도 시작 · 멈춤이 돼요. 리셋은 정한 시간으로 되돌려요. 시간이 지나면 빨간색으로 넘은 시간을 보여 줘요.';
+    box.querySelector('.note').textContent = up
+      ? '위쪽 시간을 탭해도 시작 · 멈춤이 돼요. 리셋은 00:00으로 되돌려요. 정한 시간의 80%가 되면 주황, 넘으면 빨간색으로 알려 줘요.'
+      : '위쪽 시간을 탭해도 시작 · 멈춤이 돼요. 리셋은 정한 시간으로 되돌려요. 시간이 지나면 빨간색으로 넘은 시간을 보여 줘요.';
   };
   box.querySelectorAll('[data-d]').forEach(bt => bt.onclick = () => { settings.target = clamp(settings.target + +bt.dataset.d, 1, 180); saveSettings(); show(); tick(); });
+  box.querySelectorAll('[data-m]').forEach(bt => bt.onclick = () => { settings.timerMode = bt.dataset.m; saveSettings(); show(); tick(); });
   box.querySelector('[data-a=reset]').onclick = () => { resetTimer(); show(); };
   box.querySelector('[data-a=go]').onclick = () => { toggleTimer(); show(); };
   show();
@@ -1913,7 +1923,7 @@ function openPrivacy() {
 
 // ── 사용 설명서(앱에 들어 있는 PDF) ──
 // 처음 설치하면 서재에 한 번 넣어 둔다. 설명서를 새로 고치면 GUIDE_VER 을 올린다(지운 사람에게 다시 억지로 넣지는 않음 — 판이 바뀔 때 한 번뿐)
-const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 2;
+const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 3;
 async function addGuide(open) {
   busy('사용 설명서를 준비하는 중…');
   try {
@@ -1930,11 +1940,17 @@ async function openGuide() {
   if (have) return openDoc(have.id);
   await addGuide(true);
 }
+// 처음 설치하면 한 번 넣는다. 판이 오르면 서재의 옛 설명서를 새 판으로 바꾼다(연습 필기는 쪽 배치가 달라 함께 비움).
+// 스스로 지운 사람에게는 다시 넣지 않는다 — 설정 › 사용 설명서 보기로 언제든 열 수 있다.
 async function seedGuide() {
-  if (readLS('pn.guideVer', 0) >= GUIDE_VER) return;
+  const seen = readLS('pn.guideVer', 0);
+  if (seen >= GUIDE_VER) return;
   writeLS('pn.guideVer', GUIDE_VER);
-  if ((await idb.all('docs')).some(d => d.name === GUIDE_NAME)) return;
+  const old = (await idb.all('docs')).filter(d => d.name === GUIDE_NAME);
+  if (seen && !old.length) return;
+  for (const d of old) await Promise.all([idb.del('docs', d.id), idb.del('files', d.id), idb.del('ink', d.id)]);
   await addGuide(false);
+  if (old.length) toast('사용 설명서가 새 판으로 바뀌었어요', 2600);
 }
 
 // ── 첫 사용 안내(원고를 처음 열었을 때 한 번) ──

@@ -1,5 +1,6 @@
-// 사용 설명서에 넣을 화면 조각들: 헤드리스 크롬(아이패드 13인치 크기 1032×1376, 2배)으로 찍는다.
-// 개발 서버(5178)를 켠 상태에서 `node guide-shots.mjs` → ../guide/img/*.png
+// 사용 설명서에 넣을 화면 조각: 헤드리스 크롬(아이패드 13인치 크기 1032×1376, 2배)으로 찍고,
+// 번호를 찍을 자리(요소 위치)를 같은 이름의 .json 으로 남긴다 → build-guide.py 가 ①②③ 을 그려 넣는다.
+// 개발 서버(5178)를 켠 상태에서 `node guide-shots.mjs` → ../guide/img/*.png(+.json)
 import puppeteer from 'puppeteer-core';
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +11,7 @@ const DEMO = path.join(HERE, '../demo');
 const OUT = path.join(HERE, '../guide/img');
 const RICH = '260906 주일예배 설교 - 빈 그물에 다시 내리는 손.pdf';
 const ink = JSON.parse(fs.readFileSync(path.join(HERE, 'cache/rich-ink.json'), 'utf8'));
+fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -29,26 +31,39 @@ await page.evaluateOnNewDocument(() => {
   class FakeDate extends Real { constructor(...a) { if (a.length) super(...a); else super(Real.now() + delta); } static now() { return Real.now() + delta; } }
   window.Date = FakeDate;
 });
-// 요소 둘레를 잘라 찍기
-async function clip(name, sels, pad = 16, extra = {}) {
-  const r = await page.evaluate((sels) => {
+
+// 요소 둘레를 잘라 찍고, marks([{sel, text?, n, at}])의 위치를 잘라 낸 그림 기준 좌표(2배)로 저장
+// at: below · above · left · right · in(요소 안 왼쪽 위)
+async function clip(name, sels, { pad = 16, l = 0, t = 0, r = 0, b = 0, maxH = 1376, marks = [] } = {}) {
+  const info = await page.evaluate((sels, marks) => {
+    const find = m => {
+      const els = [...document.querySelectorAll(m.sel)];
+      const el = m.text ? els.find(e => e.textContent.includes(m.text)) : els[m.i || 0];
+      const r = el?.getBoundingClientRect();
+      return r && { l: r.left, t: r.top, r: r.right, b: r.bottom, n: m.n, at: m.at || 'below' };
+    };
     const rs = sels.map(s => document.querySelector(s)?.getBoundingClientRect()).filter(Boolean);
-    return { x: Math.min(...rs.map(r => r.left)), y: Math.min(...rs.map(r => r.top)), x2: Math.max(...rs.map(r => r.right)), y2: Math.max(...rs.map(r => r.bottom)) };
-  }, sels);
-  const x = Math.max(0, r.x - pad - (extra.l || 0)), y = Math.max(0, r.y - pad - (extra.t || 0));
-  const w = Math.min(1032, r.x2 + pad + (extra.r || 0)) - x, h = Math.min(1376, r.y2 + pad + (extra.b || 0)) - y;
+    return { box: { x: Math.min(...rs.map(r => r.left)), y: Math.min(...rs.map(r => r.top)), x2: Math.max(...rs.map(r => r.right)), y2: Math.max(...rs.map(r => r.bottom)) }, marks: marks.map(find).filter(Boolean) };
+  }, sels, marks);
+  const x = Math.max(0, info.box.x - pad - l), y = Math.max(0, info.box.y - pad - t);
+  const w = Math.min(1032, info.box.x2 + pad + r) - x, h = Math.min(maxH, 1376, info.box.y2 + pad + b) - y;
   await sleep(250);
   await page.screenshot({ path: `${OUT}/${name}.png`, clip: { x, y, width: w, height: h }, captureBeyondViewport: false });
-  console.log('clip', name, Math.round(w), '×', Math.round(h));
+  if (info.marks.length) fs.writeFileSync(`${OUT}/${name}.json`, JSON.stringify(info.marks.map(m => ({ ...m, l: (m.l - x) * 2, t: (m.t - y) * 2, r: (m.r - x) * 2, b: (m.b - y) * 2 }))));
+  console.log('clip', name, Math.round(w), '×', Math.round(h), info.marks.length ? `(${info.marks.length}개 번호)` : '');
 }
-// 잘라 찍을 때 화면 크기를 바꾸지 않게(captureBeyondViewport: false) — 바꾸면 원고 스크롤이 밀린다
-const full = async (name, clipH = 1376) => { await sleep(350); await page.screenshot({ path: `${OUT}/${name}.png`, clip: { x: 0, y: 0, width: 1032, height: clipH }, captureBeyondViewport: false }); console.log('full', name); };
+// 도구 막대 · 메뉴처럼 떠 있는 것만 찍을 때 뒤 원고를 가려 배경을 깨끗하게
+const blank = on => page.evaluate(on => { document.getElementById('pages').style.visibility = on ? 'hidden' : ''; document.getElementById('guide').style.visibility = on ? 'hidden' : ''; }, on);
+const full = (name, opts = {}) => clip(name, ['body'], { pad: 0, ...opts }); // 화면 전체(opts.maxH 로 위쪽만)
 const settings = obj => page.evaluate(o => { const s = JSON.parse(localStorage.getItem('pn.settings') || '{}'); localStorage.setItem('pn.settings', JSON.stringify({ ...s, ...o })); }, obj);
 const openRich = async () => {
   await page.evaluate(() => [...document.querySelectorAll('.card')].find(c => c.querySelector('h3').textContent.includes('빈 그물'))?.querySelector('.sheet').click());
   await page.waitForFunction(() => document.querySelectorAll('canvas.pdf').length > 0, { timeout: 30000 });
   await sleep(1200);
 };
+const setTimer = (secAgo, running = true, acc = 0) => page.evaluate((secAgo, running, acc) => {
+  localStorage.setItem('pn.timer', JSON.stringify({ start: Date.now() - secAgo * 1000, acc: acc * 1000, running }));
+}, secAgo, running, acc);
 
 await page.goto('http://localhost:5178/', { waitUntil: 'networkidle0' });
 const pick = ['261011 주일예배 설교 - 겨자씨만 한 믿음', '261004 청년부 설교 - 길 위의 식탁', '260927 주일예배 설교 - 작은 자에게 한 것', '260920 주일예배 설교 - 기다림도 믿음입니다',
@@ -69,34 +84,49 @@ await page.evaluate(async (inkPages, RICH) => {
   }
 }, ink, RICH);
 await settings({ sort: 'date', tool: 'pen', penColor: '#D23B2E', target: 25, zoom: 1, thumbs: false, themePrep: 'light', themePulpit: 'light' });
-await page.evaluate(() => {
-  localStorage.setItem('pn.lastBackup', JSON.stringify(Date.now() - 2 * 86400e3));
-  localStorage.setItem('pn.timer', JSON.stringify({ start: Date.now() - (7 * 60 + 12) * 1000, acc: 0, running: true }));
-});
+await page.evaluate(() => localStorage.setItem('pn.lastBackup', JSON.stringify(Date.now() - 2 * 86400e3)));
+await setTimer(7 * 60 + 12);
 await page.reload({ waitUntil: 'networkidle0' });
 await page.evaluate(() => document.fonts.ready); await sleep(700);
 
-// 서재
-await full('library', 1000);
+// ── 서재 ──
+await full('library', { maxH: 820, marks: [
+  { sel: '#sortSeg', n: 1, at: 'below' }, { sel: '#btnSelect', n: 2, at: 'below' }, { sel: '#btnImport', n: 3, at: 'below' },
+  { sel: '#btnSettings', n: 4, at: 'below' }, { sel: '.card .more', n: 5, at: 'left' }, { sel: '.card .badge', n: 6, at: 'above' }] });
 await page.click('#btnSelect'); await sleep(200);
 await page.click('#lbPast'); await sleep(300);
-await full('library-select');
+await full('library-select', { marks: [
+  { sel: '.card.picked .pick', n: 1, at: 'right' }, { sel: '#lbPast', n: 2, at: 'above' }, { sel: '#lbAll', n: 3, at: 'above' },
+  { sel: '#lbDel', n: 4, at: 'above' }, { sel: '#lbDone', n: 5, at: 'above' }] });
 await page.click('#lbDone'); await sleep(300);
 
-// 준비 화면
+// ── 준비 화면 ──
 await openRich();
 await page.evaluate(() => { document.getElementById('scroller').scrollTop = 200; }); await sleep(900);
 await full('prep');
-await clip('bar-prep', ['#rbar'], 0);
-await clip('palette', ['#palette'], 14);
+await blank(true);
+await clip('bar-prep', ['#rbar'], { pad: 0, b: 44, marks: [
+  { sel: '#btnBack', n: 1 }, { sel: '#btnThumbs', n: 2 }, { sel: '.rtitle', n: 3 }, { sel: '#modeSeg', n: 4 }, { sel: '#btnMenu', n: 5 }] });
+await clip('palette', ['#palette'], { pad: 12, t: 38, marks: [
+  { sel: '.tool[data-tool=select]', n: 1, at: 'above' }, { sel: '.tool[data-tool=pen]', n: 2, at: 'above' }, { sel: '.tool[data-tool=hl]', n: 3, at: 'above' },
+  { sel: '.tool[data-tool=eraser]', n: 4, at: 'above' }, { sel: '#opts', n: 5, at: 'above' }, { sel: '#btnSize', n: 6, at: 'above' },
+  { sel: '#btnUndo', n: 7, at: 'above' }, { sel: '#btnRedo', n: 8, at: 'above' }, { sel: '#btnFinger', n: 9, at: 'above' }] });
 await page.click('#btnSize'); await sleep(300);
-await clip('size', ['.menu', '#palette'], 14);
+await clip('size', ['.menu'], { pad: 12, l: 44, marks: [
+  { sel: '.sizepop .prev', n: 1, at: 'left' }, { sel: '.sizepop input', n: 2, at: 'above' }, { sel: '.szrow', n: 3, at: 'left' }] });
 await page.keyboard.press('Escape'); await sleep(200);
+// 지우개 모드 막대
+await page.click('.tool[data-tool=eraser]'); await sleep(200);
+await clip('eraser', ['#palette'], { pad: 12 });
+await page.click('.tool[data-tool=pen]'); await sleep(200);
 await page.click('#btnMenu'); await sleep(300);
-await clip('menu', ['.menu'], 12);
+await clip('menu', ['.menu'], { pad: 12, l: 44, marks: [
+  { sel: '.menu .themes', n: 1, at: 'left' }, { sel: '.menu .zoomrow', n: 2, at: 'left' }, { sel: '.menu .mi', text: '여백', n: 3, at: 'left' },
+  { sel: '.menu .mi', text: '미리보기', n: 4, at: 'left' }, { sel: '.menu .mi', text: '강단에서도', n: 5, at: 'left' }, { sel: '.menu .mi', text: '내보내기', n: 6, at: 'left' }] });
 await page.keyboard.press('Escape'); await sleep(200);
+await blank(false);
 
-// 선택: 동그라미와 형광펜을 올가미로
+// ── 선택: 동그라미와 형광펜을 올가미로 ──
 await page.evaluate(() => { document.querySelector('.tool[data-tool=select]').click(); document.getElementById('scroller').scrollTop = 380; });
 await sleep(900);
 await page.evaluate(async () => {
@@ -117,29 +147,55 @@ await page.evaluate(async () => {
   ev('pointerup', cx + rx, cy);
 });
 await sleep(500);
-await clip('select', ['.selbox', '.selbar'], 34);
+await clip('select', ['.selbox', '.selbar'], { pad: 20, t: 16, b: 40, l: 40, r: 40, marks: [
+  { sel: '.selbar', n: 1, at: 'above' }, { sel: '.selhandle', n: 2, at: 'right' }, { sel: '.selrot', n: 3, at: 'left' }] });
 await page.evaluate(() => { document.querySelector('.selbar [data-a=off]')?.click(); document.querySelector('.tool[data-tool=pen]').click(); });
 
-// 쪽 미리보기
+// ── 쪽 미리보기 ──
 await page.evaluate(() => { document.getElementById('scroller').scrollTop = 200; });
 await page.click('#btnThumbs'); await sleep(1800);
-await full('thumbs', 1000);
+await full('thumbs', { maxH: 1000, marks: [
+  { sel: '#btnThumbs', n: 1, at: 'below' }, { sel: '.th.on .thc', n: 2, at: 'right' }, { sel: '.th .thc', i: 1, n: 3, at: 'right' }] });
 await page.click('#btnThumbs'); await sleep(500);
 
-// 강단
+// ── 강단 ──
 await page.evaluate(() => { document.getElementById('scroller').scrollTop = 0; document.querySelector('#modeSeg [data-mode=pulpit]').click(); });
 await sleep(900);
 await page.keyboard.press('ArrowRight'); await sleep(750);
-await page.screenshot({ path: `${OUT}/pulpit.png` }); console.log('full pulpit');
-await clip('bar-pulpit', ['#rbar'], 0);
+await full('pulpit');
+await blank(true);
+await clip('bar-pulpit', ['#rbar'], { pad: 0, b: 44, marks: [
+  { sel: '#pPage', n: 1 }, { sel: '#pClock', n: 2 }, { sel: '#pTimer', n: 3 }, { sel: '#pTarget', n: 4 },
+  { sel: '#pTheme', n: 5 }, { sel: '#pWake', n: 6 }, { sel: '#modeSeg', n: 7 }, { sel: '#btnMenu', n: 8 }] });
 await page.click('#pTarget'); await sleep(300);
-await clip('timer', ['.menu', '#pTimer', '#pTarget'], 12);
+await clip('timer', ['.menu', '#pTimer', '#pTarget'], { pad: 12, l: 46, r: 10, marks: [
+  { sel: '.tpop .tmode', n: 1, at: 'left' }, { sel: '.tpop .dial', n: 2, at: 'left' }, { sel: '.tpop .chips', n: 3, at: 'left' },
+  { sel: '.tpop [data-a=reset]', n: 4, at: 'left' }, { sel: '.tpop [data-a=go]', n: 5, at: 'right' }] });
 await page.keyboard.press('Escape'); await sleep(200);
-await page.evaluate(() => { document.querySelector('#modeSeg [data-mode=prep]').click(); });
-await sleep(300);
+await blank(false);
+// 타이머 상태별 모습(대기 · 진행 · 막바지 · 넘김 · 멈춤) + 스톱워치
+for (const [name, secAgo, running, acc, mode] of [['timer-idle', 0, false, 0], ['timer-run', 7 * 60 + 12, true, 0], ['timer-warn', 21 * 60 + 40, true, 0],
+  ['timer-over', 26 * 60 + 5, true, 0], ['timer-paused', 0, false, 9 * 60 + 30], ['sw-idle', 0, false, 0, 'up'], ['sw-run', 12 * 60 + 40, true, 0, 'up'], ['sw-over', 26 * 60 + 5, true, 0, 'up']]) {
+  await setTimer(secAgo, running, acc);
+  await settings({ timerMode: mode || 'down' });
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(400);
+  await openRich();
+  await page.evaluate(() => document.querySelector('#modeSeg [data-mode=pulpit]').click()); await sleep(700);
+  await clip(name, ['#pTimer'], { pad: 6 });
+}
+// 스톱워치로 바꾼 설정 창
+await page.click('#pTarget'); await sleep(300);
+await blank(true);
+await clip('timer-sw', ['.menu'], { pad: 12 });
+await blank(false);
+await page.keyboard.press('Escape'); await sleep(200);
+await settings({ timerMode: 'down' });
+await page.evaluate(() => document.querySelector('#modeSeg [data-mode=prep]').click()); await sleep(300);
 
-// 설정
+// ── 설정 ──
 await page.evaluate(() => document.getElementById('btnBack').click()); await sleep(900);
 await page.evaluate(() => document.getElementById('btnSettings').click()); await sleep(900);
-await clip('settings', ['.sheet-card'], 0);
+await clip('settings', ['.sheet-card'], { pad: 0, l: 44, marks: [
+  { sel: '.srow', text: '사용 설명서', n: 1, at: 'left' }, { sel: '.srow', text: '백업 만들기', n: 2, at: 'left' },
+  { sel: '.srow', text: '백업에서 복원', n: 3, at: 'left' }, { sel: '.srow', text: '문의하기', n: 4, at: 'left' }] });
 await browser.close();

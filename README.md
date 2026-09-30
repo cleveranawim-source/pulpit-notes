@@ -16,7 +16,8 @@
    - 펜슬이 없으면 손 모양 버튼으로 손가락 쓰기(스크롤은 두 손가락).
 4. **강단 모드**: 화면 오른쪽 탭 = 다음 화면, 왼쪽 30% 탭 = 이전 화면. 펜슬로 탭해도 넘어간다(필기는 메뉴의 ‘강단에서도 펜슬로 필기’를 켤 때만).
    앞 화면 마지막 몇 줄을 남기고 넘기며, 이어 읽을 자리에 금색 표시가 잠깐 뜬다.
-   **설교 타이머**: 분 단위(1~180분)로 정한 시간에서 거꾸로 센다(대기 검정 → 진행 버건디 → 80% 주황 → 넘으면 빨강 ‘+분:초 넘음’). 설정 창의 ‘리셋’은 정한 시간으로 되돌림. 현재 시각은 타이머 바로 왼쪽.
+   **설교 타이머**: 설정 창에서 방식을 고른다(`settings.timerMode`) — **타이머**(분 단위 1~180분에서 거꾸로) · **스톱워치**(00:00부터 흘러감, 정한 시간은 ‘알려 줄 시간’).
+   색은 두 방식 모두 대기 검정 → 진행 버건디 → 80% 주황 → 넘으면 빨강(타이머는 ‘+분:초 넘음’). ‘리셋’은 처음으로(타이머=정한 시간, 스톱워치=00:00). 현재 시각은 타이머 바로 왼쪽.
    시계·화면 꺼짐 방지·밝게/종이/어둡게. 블루투스 페이지 넘김 페달(방향키·PageDown) 지원.
    준비·강단 버튼과 메뉴는 두 모드에서 같은 자리(한 줄 막대).
    - **확대·축소**: 두 손가락 벌리기·오므리기, 메뉴의 −/+/맞춤, 맥은 ⌘+ ⌘− ⌘0·트랙패드. 60~250%(쪽 폭 맞춤=100%), 100%보다 크면 옆으로도 움직인다.
@@ -38,11 +39,13 @@
 | `sw.js` | 오프라인 캐시. **앱 파일을 고치면 `VERSION`을 올릴 것** |
 | `vendor/` | pdf.js 4.10.38(legacy 빌드)·pdf-lib 1.17.1 — CDN 없이 동작하도록 동봉 |
 | `fonts/` | 고운바탕 400·700 woff2(한글 11,172자 서브셋, SIL OFL) + 라이선스 전문. 외부 글꼴 요청 없음 |
-| `sample/` | **사용 설명서** `guide.pdf`(6쪽, Pretendard·고운바탕)와 원본 `guide-source.html`. 처음 설치하면 서재에 한 번 자동으로 들어간다(`GUIDE_VER`, 지우면 다시 넣지 않음 — 판을 올릴 때만 한 번 더) |
+| `sample/` | **사용 설명서** `guide.pdf`(13쪽, Pretendard·고운바탕)와 원본 `guide-source.html`. 처음 설치하면 서재에 한 번 자동으로 들어간다. `GUIDE_VER` 를 올리면 서재의 옛 설명서를 새 판으로 바꾼다(연습 필기는 비움). 스스로 지운 사람에겐 다시 넣지 않는다 |
 | `privacy.html` · `support.html` | 개인정보 처리방침 · 지원 페이지 원본. **앱스토어에 적은 주소는 레브랩 사이트 사본**(`~/Claude/levlab/public/gangdannote/{support,privacy}/index.html`, www.levlab.co.kr/gangdannote/…) — 고치면 두 곳 다 반영(사본은 경로를 `/gangdannote/…` 절대 경로로) |
 
 - 사용 설명서 다시 만들기(화면이나 내용이 바뀌었을 때, 개발 서버 5178 켠 상태):
   `cd store/tools && node guide-shots.mjs && python3 build-guide.py` → 화면 조각 `store/guide/img` → 줄인 사본 `store/guide/web` → `sample/guide.pdf`.
+  그림 위 ①②③ 번호는 찍을 때 요소 자리를 `img/<이름>.json` 에 남기고(`clip(..., { marks })`), `web/marks.js` 로 모아 설명서 HTML 이 얹는다(벡터 글자).
+  도구 막대 · 메뉴만 찍을 때는 `blank(true)` 로 뒤 원고를 가려 배경을 깨끗하게.
   설명서에 Pretendard에 없는 기호(⏱ ◢ 등)를 쓰면 애플 글꼴이 대신 박히니 피할 것. 내용이 바뀌면 `GUIDE_VER` 과 `sw.js` `VERSION` 을 올린다.
 - 백업 파일은 무압축 zip: `manifest.json`(원고 목록) + `pdf/<id>.pdf` + `ink/<id>.json`. 풀면 원본 PDF가 그대로 보인다.
   복원은 합치기: 없는 원고는 추가, 같은 원고는 필기가 더 최근인 쪽을 남긴다.
@@ -66,7 +69,7 @@
 | 다른 앱에서 받기 | — | Info.plist `CFBundleDocumentTypes`(PDF·zip) → `appUrlOpen` → Filesystem.readFile |
 | 오프라인 | 서비스워커 | 앱 안에 파일이 들어 있음(서비스워커 안 씀) |
 
-- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.1(2) — 1.0.0(1)은 2026-09-27 심사 제출분 · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
+- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.1(3) — 1.0.0(1)은 2026-09-27 심사 제출분 · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
 - 빌드: `npm run ios`(www/ 모으기 + cap sync) → Xcode에서 `ios/App/App.xcodeproj` 열기 → Product › Archive.
   시뮬레이터: `xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -derivedDataPath ios/DerivedData build CODE_SIGNING_ALLOWED=NO`.
 - JS 콘솔 보기: `xcrun simctl launch --console-pty <기기> com.yeolstudio.pulpitnotes` (⚡️ 로그).

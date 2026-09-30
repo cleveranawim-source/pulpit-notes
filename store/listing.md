@@ -53,7 +53,7 @@
 ■ 강단에서 — 탭 한 번으로 넘기기
 • 화면 오른쪽을 탭하면 다음 화면, 왼쪽을 탭하면 이전 화면으로 넘어갑니다.
 • 넘길 때 앞 화면의 마지막 몇 줄을 남겨 두고, 이어 읽을 자리에 금색 표시가 잠깐 나타나 읽던 곳을 잃지 않습니다.
-• 지금 시각과 설교 타이머를 보여 줍니다. 목표 시간을 정하면 남은 시간이 막대로 보입니다.
+• 지금 시각과 설교 타이머를 보여 줍니다. 정한 시간에서 거꾸로 세는 타이머와, 흘러간 시간을 세는 스톱워치 가운데 고를 수 있고, 막바지에는 주황 · 넘으면 빨강으로 알려 줍니다.
 • 강단 화면에서는 아이패드 화면이 꺼지지 않습니다.
 • 밝게 · 종이 · 어둡게 가운데 예배당 조명에 맞는 화면을 고르세요.
 • 블루투스 페이지 넘김 페달로도 넘길 수 있습니다.
@@ -88,10 +88,10 @@
 ```
 No account or login is required.
 
-The library already contains a built-in user guide, "강단노트 사용 설명서" (6 pages). Open it to try every feature on a real document. It can be reopened any time from Settings (gear icon) → "사용 설명서 보기".
+The library already contains a built-in user guide, "강단노트 사용 설명서" (13 pages). Open it to try every feature on a real document. It can be reopened any time from Settings (gear icon) → "사용 설명서 보기".
 
 - Prep mode (default): draw with Apple Pencil using pen, highlighter, eraser, and lasso (select) tools. A selection can be moved, resized (bottom-right handle) and rotated (bottom-left handle). Without a Pencil, turn on the hand button at the right end of the toolbar to draw with a finger. Pinch to zoom.
-- Pulpit mode: tap "강단" at the top right. Tap the right side of the screen to go to the next screen and the left side to go back. The screen stays awake in this mode. The sermon timer counts down from the minutes set with the timer button.
+- Pulpit mode: tap "강단" at the top right. Tap the right side of the screen to go to the next screen and the left side to go back. The screen stays awake in this mode. The sermon timer counts down from the minutes set with the timer button, or can be switched to a stopwatch (count up) in the same popover.
 - Import: "원고 불러오기" opens the document picker (PDF). A PDF can also be shared to the app from Files or other apps.
 - Settings (gear icon in the library): backup/restore, privacy policy, open-source licenses.
 

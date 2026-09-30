@@ -5,140 +5,428 @@
 <title>강단노트 사용 설명서</title>
 <style>
 @font-face{font-family:"Gowun Batang";src:url("../fonts/GowunBatang-Bold.woff2") format("woff2");font-weight:700}
-@page { size: A4; margin: 20mm 20mm 18mm; }
+@page { size: A4; margin: 18mm 19mm 16mm; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-body { font-family: "Pretendard", sans-serif; font-size: 12pt; line-height: 1.72; color: #231f1a; margin: 0; word-break: keep-all; }
-h1 { font-family: "Gowun Batang", serif; font-size: 26pt; margin: 0; letter-spacing: -0.01em; color: #2a241d; }
+body { font-family: "Pretendard", sans-serif; font-size: 11.6pt; line-height: 1.7; color: #231f1a; margin: 0; word-break: keep-all; }
+h1 { font-family: "Gowun Batang", serif; font-size: 28pt; margin: 0; letter-spacing: -0.01em; color: #2a241d; }
 .sub { font-size: 12.5pt; color: #6e6356; margin: 2pt 0 14pt; }
-.lead { font-size: 13pt; margin: 0 0 12pt; }
-.toc { display: grid; grid-template-columns: 1fr 1fr; gap: 4pt 16pt; padding: 12pt 14pt; background: #f4efe6; border-radius: 10pt; margin: 0 0 6pt; font-size: 12pt; }
-.toc b { color: #7c2433; margin-right: 6pt; }
-h2 { font-family: "Gowun Batang", serif; font-size: 17pt; color: #7c2433; margin: 14pt 0 4pt; padding-top: 7pt; border-top: 1.2pt solid #e4dac9; }
-h2.first { border-top: 0; padding-top: 0; margin-top: 0; }
-h2 .n { display: inline-block; min-width: 20pt; }
-h3 { font-size: 13.2pt; margin: 12pt 0 2pt; color: #2a241d; }
+.lead { font-size: 12.6pt; margin: 0 0 12pt; }
+h2 { font-family: "Gowun Batang", serif; font-size: 18pt; color: #7c2433; margin: 0 0 6pt; }
+h2 .n { display: inline-block; min-width: 22pt; }
+h3 { font-size: 13pt; margin: 14pt 0 4pt; color: #2a241d; }
 p { margin: 0 0 6pt; }
 ul { margin: 2pt 0 8pt; padding-left: 16pt; }
 li { margin-bottom: 3pt; }
 b.k { color: #7c2433; }
-.tip { background: #f4efe6; border-left: 3pt solid #b0843a; padding: 7pt 11pt; border-radius: 0 8pt 8pt 0; margin: 6pt 0 10pt; font-size: 11.8pt; }
-figure { margin: 8pt 0 12pt; text-align: center; break-inside: avoid; }
-figure img { display: inline-block; border-radius: 9pt; border: 0.8pt solid #d9cfbf; }
-figcaption { font-size: 10.5pt; color: #8a7f72; margin-top: 3pt; }
-.w100 { width: 100%; } .w80 { width: 80%; } .w70 { width: 70%; } .w62 { width: 62%; } .w55 { width: 55%; } .w46 { width: 46%; }
-.two { display: flex; gap: 14pt; align-items: flex-start; justify-content: center; }
-.two > .txt { flex: 1; min-width: 0; text-align: left; }
-.two > .txt ul { margin-top: 0; }
-.two figure { margin: 6pt 0 10pt; }
-.dots { display: inline-flex; gap: 8pt; align-items: center; font-size: 11.5pt; }
-.dot { display: inline-block; width: 10pt; height: 10pt; border-radius: 50%; vertical-align: -1pt; margin-right: 3pt; }
 .brk { break-before: page; }
-.practice p { font-size: 13pt; }
+.tip { background: #f4efe6; border-left: 3pt solid #b0843a; padding: 7pt 11pt; border-radius: 0 8pt 8pt 0; margin: 8pt 0 10pt; font-size: 11pt; break-inside: avoid; }
+.tip b:first-child { color: #8a5f1c; }
+.warm { background: #f7ecee; border-left-color: #7c2433; }
+.warm b:first-child { color: #7c2433; }
+figure { margin: 8pt 0 10pt; text-align: center; break-inside: avoid; }
+figcaption { font-size: 10pt; color: #8a7f72; margin-top: 4pt; }
+.shot { position: relative; display: inline-block; vertical-align: top; }
+.shot img { display: block; border-radius: 8pt; border: 0.8pt solid #d9cfbf; }
+.shot.flat img { border-radius: 5pt; }
+/* 그림 위 번호 */
+.mk, i.n { font-style: normal; display: inline-block; width: 15pt; height: 15pt; border-radius: 50%; background: #7c2433; color: #fff; font-weight: 700; font-size: 9.2pt; line-height: 15pt; text-align: center; }
+.mk { position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 1.6pt #fff, 0 1pt 3pt rgba(0,0,0,.25); z-index: 2; }
+i.n { margin-right: 6pt; flex: none; position: relative; top: 1.5pt; }
+ol.legend { list-style: none; padding: 0; margin: 4pt 0 8pt; }
+ol.legend li { display: flex; align-items: flex-start; margin-bottom: 4pt; }
+ol.legend.cols { columns: 2; column-gap: 18pt; }
+ol.legend.cols li { break-inside: avoid; }
+/* 따라 하기 순서 */
+ol.steps { counter-reset: st; list-style: none; padding: 0; margin: 4pt 0 8pt; }
+ol.steps > li { counter-increment: st; position: relative; padding-left: 26pt; margin-bottom: 6pt; break-inside: avoid; }
+ol.steps > li::before { content: counter(st); position: absolute; left: 0; top: 1pt; width: 18pt; height: 18pt; border-radius: 6pt; background: #f4efe6; border: 1pt solid #d9c9a9; color: #8a5f1c; font-weight: 800; font-size: 10pt; line-height: 18pt; text-align: center; }
+.two { display: flex; gap: 16pt; align-items: flex-start; }
+.two > .txt { flex: 1; min-width: 0; }
+.two > figure { margin-top: 2pt; flex: none; }
+.quick { background: #f4efe6; border-radius: 10pt; padding: 11pt 14pt 6pt; margin: 0 0 12pt; }
+.quick h3 { margin: 0 0 6pt; color: #7c2433; }
+.quick ol.steps > li::before { background: #fff; }
+.toc { display: grid; grid-template-columns: 1fr 1fr; gap: 3pt 18pt; padding: 0 2pt; margin: 4pt 0 0; font-size: 11.6pt; }
+.toc b { color: #7c2433; display: inline-block; min-width: 20pt; }
+.toc em { font-style: normal; font-size: 9.5pt; color: #fff; background: #b0843a; border-radius: 4pt; padding: 0 4pt; margin-left: 5pt; vertical-align: 1pt; }
+/* 강단 탭 자리 */
+.zones { position: absolute; left: 0.8pt; right: 0.8pt; top: 4.4%; bottom: 0.8pt; display: flex; border-radius: 0 0 7pt 7pt; overflow: hidden; }
+.zones span { display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11pt; color: #fff; }
+.zones .prev { width: 30%; background: rgba(60, 50, 40, .30); border-right: 1.4pt dashed rgba(255,255,255,.95); }
+.zones .next { flex: 1; background: rgba(124, 36, 51, .12); }
+.zones span i { font-style: normal; background: rgba(35, 31, 26, .78); border-radius: 6pt; padding: 3pt 8pt; }
+/* 타이머 모습 표 */
+table.states { border-collapse: collapse; width: 100%; margin: 4pt 0 8pt; font-size: 11pt; break-inside: avoid; }
+table.states td { padding: 5pt 6pt; border-bottom: 0.8pt solid #e8dfd0; vertical-align: middle; }
+table.states td.img { width: 92pt; text-align: center; }
+table.states td.img img { width: 84pt; border-radius: 6pt; border: 0.8pt solid #e1d7c6; display: block; margin: 0 auto; }
+table.states td.nm { width: 58pt; font-weight: 700; white-space: nowrap; }
+.dot { display: inline-block; width: 9pt; height: 9pt; border-radius: 50%; vertical-align: -0.5pt; margin-right: 4pt; }
+.faq h3 { margin-top: 12pt; font-size: 12.2pt; }
+.faq h3::before { content: "Q"; color: #b0843a; font-family: "Gowun Batang", serif; font-size: 14pt; margin-right: 6pt; }
+.faq p, .faq ul { font-size: 11.2pt; }
+.practice p { font-size: 12.4pt; }
 .try { color: #7c2433; font-weight: 700; }
 .q { margin: 6pt 0 10pt 14pt; padding-left: 10pt; border-left: 2pt solid #cfc3ae; color: #333; }
-.end { text-align: center; color: #8a7f72; font-size: 10.5pt; margin-top: 18pt; }
+.end { text-align: center; color: #8a7f72; font-size: 10.5pt; margin-top: 20pt; }
 </style>
 </head>
 <body>
 
 <h1>강단노트 사용 설명서</h1>
 <p class="sub">설교 원고를 읽고, 표시하고, 강단으로.</p>
-<p class="lead">강단노트는 설교를 준비하는 책상에서, 그리고 말씀을 전하는 강단에서 함께하는 아이패드 원고 리더입니다. 이 설명서도 원고처럼 열려 있으니, 읽으면서 애플펜슬로 마음껏 써 보세요.</p>
+<p class="lead">강단노트는 설교를 준비하는 책상에서, 그리고 말씀을 전하는 강단에서 함께하는 아이패드 원고 리더예요. 이 설명서도 원고처럼 열려 있으니, 읽으면서 애플펜슬로 마음껏 써 보세요. 틀려도 괜찮아요 — 지우개와 되돌리기가 있으니까요.</p>
+
+<div class="quick">
+  <h3>처음 5분, 이렇게 따라 해 보세요</h3>
+  <ol class="steps">
+    <li>서재 오른쪽 위 <b class="k">원고 불러오기</b>를 누르고 설교 원고 PDF를 골라요.</li>
+    <li>원고가 열리면 애플펜슬로 밑줄 · 형광펜 · 동그라미를 그어 표시해요.</li>
+    <li>오른쪽 위 <b class="k">강단</b>을 누르면 설교할 때 쓰는 화면이 돼요.</li>
+    <li>위쪽 <b class="k">타이머 설정 버튼(25분)</b>에서 설교 시간을 정하고, 시간을 탭해 시작해요.</li>
+    <li>화면 오른쪽을 탭하며 한 화면씩 넘겨 설교해요. 왼쪽을 탭하면 이전 화면이에요.</li>
+  </ol>
+</div>
+
+<h3 style="margin-top:4pt">차례</h3>
 <div class="toc">
-  <span><b>1</b>원고 불러오기</span><span><b>5</b>강단에서 설교하기</span>
-  <span><b>2</b>애플펜슬로 준비하기</span><span><b>6</b>원고 정리와 백업</span>
-  <span><b>3</b>필기 옮기기 · 크기 · 회전</span><span><b>7</b>연습해 보기</span>
-  <span><b>4</b>읽기 편하게</span><span></span>
+  <span><b>1</b>원고 불러오기</span><span><b>7</b>강단에서 설교하기</span>
+  <span><b>2</b>원고 화면 한눈에 보기</span><span><b>8</b>설교 타이머 · 스톱워치<em>자세히</em></span>
+  <span><b>3</b>애플펜슬로 준비하기</span><span><b>9</b>원고 정리와 백업</span>
+  <span><b>4</b>필기 옮기기 · 크기 · 회전</span><span><b>10</b>자주 묻는 질문</span>
+  <span><b>5</b>쪽 미리보기<em>자세히</em></span><span><b>11</b>연습해 보기</span>
+  <span><b>6</b>읽기 편하게 — 확대 · 화면 색</span><span></span>
 </div>
+<div class="tip" style="margin-top:14pt"><b>원고는 이 아이패드 안에만</b> — 강단노트에는 회원 가입도, 로그인도 없어요. 원고와 필기는 이 기기 안에만 저장되고 어떤 서버로도 보내지 않아요. 인터넷이 없는 예배당에서도 그대로 동작해요.</div>
 
-<h2><span class="n">1</span>원고 불러오기</h2>
-<p>강단노트는 <b class="k">PDF 원고</b>를 엽니다. PDF에는 원고를 쓸 때 고른 글꼴이 그대로 담겨, 어느 기기에서 열어도 쓰신 모양 그대로 보입니다.</p>
-<ul>
-  <li>서재 오른쪽 위 <b class="k">원고 불러오기</b> → 파일 앱에서 PDF를 고릅니다. 여러 개를 한 번에 골라도 됩니다.</li>
-  <li>파일 앱 · 메일 · 구글 드라이브 앱에서 PDF를 <b class="k">공유 → 강단노트</b>로 보내도 바로 들어옵니다.</li>
-  <li>파일 이름을 <b>‘260921 주일예배 설교 - 제목’</b>처럼 지으면 날짜 · 예배 · 제목이 나뉘어 정리됩니다.</li>
-</ul>
-<div class="tip"><b>원고를 PDF로 만드는 법</b> — 한글: 파일 → PDF로 저장하기 · 워드: 다른 이름으로 저장 → PDF · Pages: 내보내기 → PDF · 구글 문서: 다운로드 → PDF 문서</div>
-<figure><img style="width:205pt" src="../store/guide/web/library.jpg"><figcaption>서재 — 최근 연 순, 설교 날짜 순으로 볼 수 있어요. 카드의 ‘필기 N쪽’은 필기가 있는 쪽 수예요.</figcaption></figure>
+<!-- 1 -->
+<h2 class="brk"><span class="n">1</span>원고 불러오기</h2>
+<p>강단노트는 <b class="k">PDF 원고</b>를 열어요. PDF에는 원고를 쓸 때 고른 글꼴이 그대로 담겨서, 어느 기기에서 열어도 쓰신 모양 그대로 보여요.</p>
+<figure><div class="shot" data-shot="library"><img style="width:290pt" src="../store/guide/web/library.jpg"></div><figcaption>서재 — 불러온 원고가 카드로 모여 있어요</figcaption></figure>
+<ol class="legend cols">
+  <li><i class="n">1</i><span><b>정렬</b> — 최근 연 순 · 설교 날짜 순.</span></li>
+  <li><i class="n">2</i><span><b>원고 선택</b> — 여러 원고를 골라 한 번에 지워요(9장).</span></li>
+  <li><i class="n">3</i><span><b>원고 불러오기</b> — 파일 앱에서 PDF를 골라요. 여러 개도 한 번에.</span></li>
+  <li><i class="n">4</i><span><b>설정</b> — 설명서 · 백업 · 문의.</span></li>
+  <li><i class="n">5</i><span><b>더 보기</b> — 제목 바꾸기 · 지우기.</span></li>
+  <li><i class="n">6</i><span><b>필기 N쪽</b> — 필기가 있는 쪽 수예요.</span></li>
+</ol>
+<h3>원고를 넣는 세 가지 방법</h3>
+<ol class="steps">
+  <li><b>서재에서</b> — <b class="k">원고 불러오기</b> → 파일 앱이 열리면 iCloud Drive · 구글 드라이브 · 나의 iPad에서 PDF를 골라요.</li>
+  <li><b>다른 앱에서 보내기</b> — 파일 앱 · 메일 · 카카오톡에서 PDF를 열고 <b class="k">공유 → 강단노트</b>를 누르면 바로 들어와요.</li>
+  <li><b>구글 드라이브 앱에서</b> — 원고 옆 점 세 개(더 보기) → <b class="k">다음에서 열기</b>(또는 사본 보내기) → 강단노트.</li>
+</ol>
+<div class="tip"><b>파일 이름 붙이는 요령</b> — ‘260921 주일예배 설교 - 제목’처럼 지으면 날짜 · 예배 · 제목이 알아서 나뉘어 정리돼요. 날짜 순 정렬과 ‘지난 설교’ 고르기도 이 날짜를 써요.<br><b>원고를 PDF로 만드는 법</b> — 한글: 파일 → PDF로 저장하기 · 워드: 다른 이름으로 저장 → PDF · Pages: 내보내기 → PDF · 구글 문서: 다운로드 → PDF 문서</div>
 
-<h2 class="brk first"><span class="n">2</span>애플펜슬로 준비하기</h2>
-<p>원고를 열면 <b class="k">준비</b> 화면입니다. 아래쪽 도구 막대에서 도구를 고르고 펜슬로 씁니다. 손가락은 화면을 넘기는 데만 쓰이니, 쓰는 동안 손바닥이 닿아도 괜찮습니다.</p>
-<figure><img class="w80" src="../store/guide/web/palette.png"><figcaption>왼쪽부터 선택(올가미) · 펜 · 형광펜 · 지우개 · 색 · 굵기 · 되돌리기 · 다시하기 · 손가락 쓰기</figcaption></figure>
-<ul>
-  <li><b>펜</b>은 누르는 힘에 따라 굵기가 조금씩 달라집니다. 색은 네 가지 가운데서 고릅니다.</li>
-  <li><b>형광펜</b>을 대충 곧게 그어도 반듯한 줄로 정리되고, 아래 글씨는 가려지지 않습니다.</li>
-  <li><b>지우개</b>는 두 가지입니다. <b class="k">부분</b>은 연필 지우개처럼 지나간 자리만, <b class="k">획 전체</b>는 닿은 획을 한 번에 지웁니다.</li>
-  <li><b>굵기</b> 버튼을 누르면 슬라이더와 −/+ 버튼이 나오고, 굵기를 <b class="k">pt</b>(포인트) 숫자로 보여 줍니다.</li>
-  <li>펜슬이 없다면 손 모양 버튼을 켜고 손가락으로 씁니다(이때 화면 넘기기는 두 손가락).</li>
-</ul>
+<!-- 2 -->
+<h2 class="brk"><span class="n">2</span>원고 화면 한눈에 보기</h2>
+<p>원고를 열면 <b class="k">준비</b> 화면이에요. 위쪽에는 한 줄 막대, 아래쪽에는 필기 도구 막대가 있어요.</p>
+<figure><div class="shot flat" data-shot="bar-prep" style="width:100%"><img style="width:100%;box-sizing:border-box" src="../store/guide/web/bar-prep.png"></div></figure>
+<ol class="legend">
+  <li><i class="n">1</i><span><b>서재로</b> — 원고 목록으로 돌아가요. 필기는 쓰는 즉시 저장돼 있어요.</span></li>
+  <li><i class="n">2</i><span><b>쪽 미리보기</b> — 왼쪽에 쪽 목록을 열고 닫아요(5장에서 자세히).</span></li>
+  <li><i class="n">3</i><span><b>제목과 쪽</b> — 지금 보는 쪽이 표시돼요.</span></li>
+  <li><i class="n">4</i><span><b>준비 · 강단</b> — 두 화면을 오가요. 어느 화면에서든 늘 같은 자리에 있어요.</span></li>
+  <li><i class="n">5</i><span><b>메뉴</b> — 화면 색 · 확대 · 여백 · 내보내기(6장).</span></li>
+</ol>
 <div class="two">
-  <figure><img style="width:200pt" src="../store/guide/web/prep.jpg"><figcaption>준비 화면 — 밑줄 · 형광펜 · 동그라미 · 쉼 표시</figcaption></figure>
-  <figure style="margin-top:40pt"><img style="width:230pt" src="../store/guide/web/size.png"><figcaption>굵기 — pt 숫자와 실제 크기 미리보기</figcaption></figure>
-</div>
-
-<h2 class="brk first"><span class="n">3</span>필기 옮기기 · 크기 · 회전</h2>
-<p>도구 막대 맨 왼쪽 <b class="k">선택(올가미)</b>으로 필기를 둘러싸면 그 필기가 선택됩니다. 한 획만 고를 때는 그 획을 톡 누르세요.</p>
-<ul>
-  <li><b>옮기기</b> — 선택 상자를 펜슬이나 손가락으로 끌어 옮깁니다.</li>
-  <li><b>크기</b> — 오른쪽 아래 <b class="k">동그란 손잡이</b>를 끌면 커지고 작아집니다. 선 굵기도 함께 바뀝니다.</li>
-  <li><b>회전</b> — 왼쪽 아래 <b class="k">↻ 손잡이</b>를 돌리면 가운데를 축으로 돌아갑니다. 0° · 90° · 180°에서 살짝 달라붙습니다.</li>
-  <li><b>지우기</b> — 위에 뜨는 막대에서 지우기를 누릅니다. 잘못했다면 되돌리기로 살릴 수 있습니다.</li>
-</ul>
-<figure><img style="width:250pt" src="../store/guide/web/select.png"><figcaption>선택한 필기 — 위쪽 막대와 두 손잡이(오른쪽 아래 크기 · 왼쪽 아래 회전 ↻)</figcaption></figure>
-
-<h2><span class="n">4</span>읽기 편하게</h2>
-<div class="two"><div class="txt"><ul>
-  <li><b>확대 · 축소</b> — 두 손가락으로 벌리고 오므립니다. 메뉴(⋯)의 −/+ 와 ‘맞춤’으로도 됩니다. 100%보다 크게 보면 옆으로도 움직일 수 있습니다.</li>
-  <li><b>여백 줄여 크게 보기</b> — 원고의 바깥 여백을 자동으로 줄여 글씨가 더 크게 보입니다(메뉴에서 끄고 켬).</li>
-  <li><b>쪽 미리보기</b> — 위쪽 막대의 목록 버튼을 누르면 왼쪽에 쪽 목록이 열리고 닫힙니다. 필기도 함께 보이고, 누르면 그 쪽으로 갑니다.</li>
-  <li><b>화면 색</b> — 메뉴에서 밝게 · 종이 · 어둡게를 고릅니다. 아이패드를 가로로 돌리면 글씨가 더 커집니다.</li>
-</ul></div>
-<figure style="margin-top:2pt"><img style="width:165pt" src="../store/guide/web/thumbs.jpg"><figcaption>쪽 미리보기</figcaption></figure></div>
-
-<h2 class="brk first"><span class="n">5</span>강단에서 설교하기</h2>
-<p>오른쪽 위 <b class="k">강단</b>을 누르면 설교할 때 쓰는 화면이 됩니다. 준비 · 강단 버튼은 두 화면에서 늘 같은 자리에 있습니다.</p>
-<figure><img class="w100" src="../store/guide/web/bar-pulpit.png"><figcaption>쪽 번호 · 지금 시각 · 설교 타이머 · 타이머 설정 · 화면 색 · 화면 꺼짐 방지 · 준비/강단 · 메뉴</figcaption></figure>
-<div class="two"><div class="txt"><ul>
-  <li><b>넘기기</b> — 화면 오른쪽을 탭하면 다음 화면, 왼쪽을 탭하면 이전 화면입니다. 펜슬로 탭해도 넘어갑니다.</li>
-  <li><b>이어 읽을 자리</b> — 넘길 때 앞 화면의 마지막 몇 줄을 남기고, 이어 읽을 자리에 금색 줄이 잠깐 나타납니다.</li>
-  <li><b>강단에서 필기</b> — 설교 중 실수로 그어지지 않도록 강단에서는 필기가 꺼져 있습니다. 필요하면 메뉴의 ‘강단에서도 펜슬로 필기’를 켜세요.</li>
-  <li><b>화면 꺼짐 방지</b> — 강단 화면에서는 아이패드 화면이 저절로 꺼지지 않습니다(초록 자물쇠).</li>
-  <li><b>페달</b> — 블루투스 페이지 넘김 페달로도 넘길 수 있습니다.</li>
-</ul></div>
-<figure style="margin-top:2pt"><img style="width:170pt" src="../store/guide/web/pulpit.jpg"><figcaption>금색 줄 = 이어 읽을 자리</figcaption></figure></div>
-<h3>설교 타이머</h3>
-<div class="two">
-  <figure><img style="width:190pt" src="../store/guide/web/timer.png"><figcaption>타이머 설정 — 분 단위로 정하기</figcaption></figure>
-  <div style="flex:1;max-width:250pt;text-align:left">
-    <p>시계 모양의 타이머 설정 버튼에서 설교 시간을 분 단위로 정하면, 그 시간에서 거꾸로 셉니다. 위쪽 시간을 탭하면 시작 · 멈춤, <b class="k">리셋</b>은 정한 시간으로 되돌립니다.</p>
-    <p class="dots"><span><i class="dot" style="background:#231f1a"></i>대기</span><span><i class="dot" style="background:#7c2433"></i>진행</span><span><i class="dot" style="background:#c98a1b"></i>막바지(80%)</span><span><i class="dot" style="background:#d93025"></i>넘음</span></p>
-    <p>시간이 지나면 빨간색으로 <b>+분:초 넘음</b>을 보여 주고, 위쪽 막대 아래 줄도 함께 차오릅니다.</p>
+  <figure><div class="shot"><img style="width:200pt" src="../store/guide/web/prep.jpg"></div><figcaption>준비 화면 — 밑줄 · 형광펜 · 동그라미 · 쉼 표시</figcaption></figure>
+  <div class="txt">
+    <h3 style="margin-top:0">펜슬은 쓰고, 손가락은 넘겨요</h3>
+    <p>준비 화면에서 <b class="k">애플펜슬</b>은 글씨를 쓰고, <b class="k">손가락</b>은 원고를 위아래로 넘겨요. 그래서 쓰는 동안 손바닥이 화면에 닿아도 괜찮아요.</p>
+    <p>필기는 원고에 딱 붙어 있어요. 확대하거나 아이패드를 가로로 돌려도 제자리에 그대로 있어요.</p>
+    <h3>저장은 따로 안 해도 돼요</h3>
+    <p>한 획을 그을 때마다 이 아이패드에 바로 저장돼요. 앱을 닫았다 열어도 그대로예요.</p>
   </div>
 </div>
 
-<h2 class="brk first"><span class="n">6</span>원고 정리와 백업</h2>
+<!-- 3 -->
+<h2 class="brk"><span class="n">3</span>애플펜슬로 준비하기</h2>
+<p>아래쪽 도구 막대에서 도구를 고르고 펜슬로 써요.</p>
+<figure><div class="shot flat" data-shot="palette"><img style="width:400pt" src="../store/guide/web/palette.png"></div></figure>
+<ol class="legend cols">
+  <li><i class="n">1</i><span><b>선택(올가미)</b> — 필기를 골라 옮겨요(4장).</span></li>
+  <li><i class="n">2</i><span><b>펜</b> — 누르는 힘에 따라 굵기가 살짝 달라져요.</span></li>
+  <li><i class="n">3</i><span><b>형광펜</b> — 아래 글씨를 가리지 않아요.</span></li>
+  <li><i class="n">4</i><span><b>지우개</b> — 부분 · 획 전체 두 가지.</span></li>
+  <li><i class="n">5</i><span><b>색</b> — 고른 도구의 색이에요.</span></li>
+  <li><i class="n">6</i><span><b>굵기</b> — 숫자는 pt(포인트).</span></li>
+  <li><i class="n">7</i><span><b>되돌리기</b> — 방금 한 일을 취소해요.</span></li>
+  <li><i class="n">8</i><span><b>다시하기</b> — 취소한 것을 되살려요.</span></li>
+  <li><i class="n">9</i><span><b>손가락 쓰기</b> — 펜슬이 없을 때.</span></li>
+</ol>
+
+<h3>굵기 바꾸기</h3>
+<div class="two">
+  <figure><div class="shot flat" data-shot="size"><img style="width:220pt" src="../store/guide/web/size.png"></div></figure>
+  <div class="txt">
+    <p><b class="k">굵기</b> 버튼을 누르면 작은 창이 열려요.</p>
+    <ol class="legend">
+      <li><i class="n">1</i><span>지금 화면에서의 실제 크기 미리보기</span></li>
+      <li><i class="n">2</i><span>슬라이더를 밀어 굵기를 정해요</span></li>
+      <li><i class="n">3</i><span>−/+ 로 조금씩, 숫자는 pt</span></li>
+    </ol>
+  </div>
+</div>
+
+<h3>지우개 두 가지</h3>
+<figure><div class="shot flat"><img style="width:330pt" src="../store/guide/web/eraser.png"></div><figcaption>지우개를 고르면 막대에 ‘부분 · 획 전체’가 나와요</figcaption></figure>
 <ul>
-  <li><b>여러 원고 지우기</b> — 서재의 <b class="k">원고 선택</b>(또는 카드를 길게 누르기) → 원고를 탭해 고르고 아래 막대에서 지웁니다. <b>‘지난 설교 N편’</b>은 파일 이름 날짜가 오늘보다 앞선 원고를 한 번에 고릅니다.</li>
-  <li><b>필기 포함 PDF 내보내기</b> — 원고 화면 메뉴(⋯)에서 누르면 필기가 들어간 PDF를 파일 앱 · 메일 · 드라이브로 보낼 수 있습니다.</li>
-  <li><b>백업 만들기 · 백업에서 복원</b> — 서재 오른쪽 위 설정(톱니바퀴)에서. 기기를 바꾸기 전에 백업 파일을 iCloud Drive나 구글 드라이브에 보관하세요.</li>
+  <li><b class="k">부분</b> — 연필 지우개처럼 지나간 자리만 지워요. 밑줄의 가운데만 지울 때 좋아요.</li>
+  <li><b class="k">획 전체</b> — 닿은 획을 한 번에 통째로 지워요.</li>
+</ul>
+<div class="tip"><b>알아 두면 좋아요</b> — 형광펜을 대충 곧게 그어도 반듯한 줄로 정리돼요(글줄과 나란하면 수평으로). 펜슬이 없다면 <b>손가락 쓰기</b>를 켜세요. 이때 원고 넘기기는 두 손가락으로 해요.</div>
+
+<!-- 4 -->
+<h2 class="brk"><span class="n">4</span>필기 옮기기 · 크기 · 회전</h2>
+<p>잘못된 자리에 쓴 필기, 너무 크거나 작게 쓴 필기도 다시 쓸 필요 없어요. 골라서 옮기고, 키우고, 돌리면 돼요.</p>
+<figure><div class="shot" data-shot="select"><img style="width:300pt" src="../store/guide/web/select.jpg"></div><figcaption>동그라미와 형광펜을 함께 고른 모습</figcaption></figure>
+<ol class="legend">
+  <li><i class="n">1</i><span><b>선택 막대</b> — 고른 획 수 · 지우기 · 선택 해제(X)</span></li>
+  <li><i class="n">2</i><span><b>크기 손잡이</b>(오른쪽 아래) — 끌면 커지고 작아져요. 선 굵기도 함께 바뀌어요.</span></li>
+  <li><i class="n">3</i><span><b>회전 손잡이</b>(왼쪽 아래 ↻) — 돌리면 가운데를 축으로 돌아가요.</span></li>
+</ol>
+<h3>따라 해 보기</h3>
+<ol class="steps">
+  <li>도구 막대 맨 왼쪽 <b class="k">선택(올가미)</b>을 눌러요.</li>
+  <li>옮기고 싶은 필기를 펜슬로 <b>빙 둘러싸요</b>. 한 획만 고를 때는 그 획을 <b>톡</b> 누르면 돼요.</li>
+  <li><b>옮기기</b> — 점선 상자 안을 펜슬이나 손가락으로 끌어요.</li>
+  <li><b>크기</b> — 오른쪽 아래 동그란 손잡이를 바깥으로 끌면 커지고, 안으로 끌면 작아져요.</li>
+  <li><b>회전</b> — 왼쪽 아래 ↻ 손잡이를 잡고 돌려요. 돌리는 동안 각도가 보이고, 0° · 90° · 180°에서 살짝 달라붙어 반듯하게 맞추기 쉬워요.</li>
+  <li>다 됐으면 빈 곳을 펜슬로 톡 누르거나 막대의 X를 눌러 선택을 풀어요.</li>
+</ol>
+<div class="tip"><b>잘못 옮겼다면</b> — 도구 막대의 <b>되돌리기</b>를 누르면 옮기기 · 크기 · 회전 전으로 한 번에 돌아가요.</div>
+
+<!-- 5 -->
+<h2 class="brk"><span class="n">5</span>쪽 미리보기</h2>
+<p>원고가 여러 쪽일 때, 왼쪽에 <b class="k">쪽 목록</b>을 펼쳐 두면 전체를 한눈에 보고 원하는 쪽으로 바로 갈 수 있어요. 필기도 작게 함께 보여서 “동그라미 친 그 대목이 몇 쪽이었더라?” 할 때 편해요.</p>
+<figure><div class="shot" data-shot="thumbs"><img style="width:280pt" src="../store/guide/web/thumbs.jpg"></div><figcaption>쪽 미리보기를 연 모습 — 원고는 오른쪽으로 비켜서 그대로 읽을 수 있어요</figcaption></figure>
+<ol class="legend">
+  <li><i class="n">1</i><span><b>목록 버튼</b> — 누르면 열리고, 한 번 더 누르면 닫혀요. 열려 있을 때는 버튼 색이 진해져요.</span></li>
+  <li><i class="n">2</i><span><b>지금 보는 쪽</b> — 테두리로 표시돼요. 원고를 넘기면 따라 움직여요.</span></li>
+  <li><i class="n">3</i><span><b>다른 쪽</b> — 누르면 그 쪽으로 바로 가요. 아래 숫자가 쪽 번호예요.</span></li>
+</ol>
+<h3>여는 방법 세 가지</h3>
+<ol class="steps">
+  <li><b>준비 화면</b> — 위쪽 막대 왼쪽의 <b class="k">목록 버튼</b>(서재로 버튼 바로 옆)을 눌러요.</li>
+  <li><b>강단 화면</b> — 위쪽 왼쪽의 <b class="k">쪽 번호</b>(예: 1 / 2)를 눌러요. 설교 중에 광고나 찬양 뒤 원하는 쪽으로 바로 돌아갈 때 좋아요.</li>
+  <li><b>어느 화면이든</b> — 메뉴(⋯) → <b class="k">쪽 미리보기</b> 스위치를 켜요.</li>
+</ol>
+<h3>닫는 방법</h3>
+<p>연 버튼을 한 번 더 누르면 닫혀요. 목록이 닫히면 원고가 다시 화면 가득 넓어져요.</p>
+<div class="tip"><b>한 번 열어 두면 기억해요</b> — 쪽 미리보기를 켜 두면 다음에 원고를 열 때도 열려 있어요. 글씨를 크게 보고 싶을 때는 닫아 두세요.</div>
+
+<!-- 6 -->
+<h2 class="brk"><span class="n">6</span>읽기 편하게 — 확대 · 화면 색</h2>
+<div class="two">
+  <figure><div class="shot" data-shot="menu"><img style="width:215pt" src="../store/guide/web/menu.png"></div><figcaption>오른쪽 위 메뉴(⋯)</figcaption></figure>
+  <div class="txt">
+    <ol class="legend">
+      <li><i class="n">1</i><span><b>화면 색</b> — 밝게 · 종이 · 어둡게. 준비와 강단에 따로 기억돼요.</span></li>
+      <li><i class="n">2</i><span><b>확대 · 축소</b> — −/+ 와 ‘맞춤’(쪽 폭에 맞게 = 100%).</span></li>
+      <li><i class="n">3</i><span><b>여백 줄여 크게 보기</b> — 원고 바깥 여백을 잘라 글씨가 약 1.3배 커져요.</span></li>
+      <li><i class="n">4</i><span><b>쪽 미리보기</b> — 5장을 보세요.</span></li>
+      <li><i class="n">5</i><span><b>강단에서도 펜슬로 필기</b> — 7장을 보세요.</span></li>
+      <li><i class="n">6</i><span><b>필기 포함 PDF 내보내기</b> — 필기가 들어간 PDF를 파일 앱 · 메일 · 드라이브로 보내요.</span></li>
+    </ol>
+  </div>
+</div>
+<h3>손가락으로 확대 · 축소</h3>
+<ol class="steps">
+  <li>두 손가락을 화면에 대고 <b>벌리면</b> 커지고, <b>오므리면</b> 작아져요(60~250%).</li>
+  <li>100%보다 크게 보면 원고를 옆으로도 움직일 수 있어요.</li>
+  <li>원래대로 돌아오려면 메뉴 → 확대 · 축소의 <b class="k">맞춤</b>을 눌러요.</li>
+</ol>
+<div class="tip"><b>더 크게 보고 싶다면</b> — 아이패드를 <b>가로로</b> 돌려 보세요. 원고가 화면 폭에 맞춰지니 글씨가 훨씬 커져요. 강단에서 거리가 멀다면 가로 화면 + 여백 줄이기를 함께 쓰면 좋아요.</div>
+
+<!-- 7 -->
+<h2 class="brk"><span class="n">7</span>강단에서 설교하기</h2>
+<p>오른쪽 위 <b class="k">강단</b>을 누르면 설교할 때 쓰는 화면이 돼요. 위쪽 막대가 강단용으로 바뀌어요.</p>
+<figure><div class="shot flat" data-shot="bar-pulpit" style="width:100%"><img style="width:100%;box-sizing:border-box" src="../store/guide/web/bar-pulpit.png"></div></figure>
+<ol class="legend cols">
+  <li><i class="n">1</i><span><b>쪽 번호</b> — 누르면 쪽 미리보기</span></li>
+  <li><i class="n">2</i><span><b>지금 시각</b></span></li>
+  <li><i class="n">3</i><span><b>타이머</b> — 탭하면 시작 · 멈춤</span></li>
+  <li><i class="n">4</i><span><b>타이머 설정</b> — 시간 · 방식(8장)</span></li>
+  <li><i class="n">5</i><span><b>화면 색</b> — 밝게 · 종이 · 어둡게</span></li>
+  <li><i class="n">6</i><span><b>화면 꺼짐 방지</b> — 초록이면 켜짐</span></li>
+  <li><i class="n">7</i><span><b>준비 · 강단</b></span></li>
+  <li><i class="n">8</i><span><b>메뉴</b></span></li>
+</ol>
+<div class="two">
+  <figure><div class="shot"><img style="width:215pt" src="../store/guide/web/pulpit.jpg"><div class="zones"><span class="prev"><i>이전</i></span><span class="next"><i>다음 화면</i></span></div></div><figcaption>탭하는 자리 — 왼쪽 30%는 이전, 나머지는 다음</figcaption></figure>
+  <div class="txt">
+    <h3 style="margin-top:0">넘기기</h3>
+    <ul>
+      <li>화면 <b class="k">오른쪽</b>을 탭하면 다음 화면, <b class="k">왼쪽</b>을 탭하면 이전 화면이에요.</li>
+      <li>펜슬로 탭해도 넘어가요.</li>
+      <li>블루투스 <b>페이지 넘김 페달</b>도 쓸 수 있어요.</li>
+    </ul>
+    <h3>이어 읽을 자리</h3>
+    <p>한 화면을 통째로 넘기지 않고 앞 화면의 마지막 몇 줄을 남겨 둬요. 그리고 이어 읽을 자리에 <b class="k">금색 줄</b>이 잠깐 나타나서, 눈이 어디로 가야 할지 바로 알 수 있어요.</p>
+    <h3>강단에서는 필기가 꺼져 있어요</h3>
+    <p>설교 중 실수로 그어지지 않도록 강단에서는 펜슬로 탭해도 넘기기만 돼요. 강단에서도 쓰고 싶다면 메뉴의 <b>강단에서도 펜슬로 필기</b>를 켜세요.</p>
+    <h3>화면이 꺼지지 않아요</h3>
+    <p>강단 화면에서는 아이패드가 저절로 잠기지 않아요. 자물쇠가 <b>초록색</b>이면 켜져 있다는 뜻이에요.</p>
+  </div>
+</div>
+
+<!-- 8 -->
+<h2 class="brk"><span class="n">8</span>설교 타이머 · 스톱워치</h2>
+<p>강단 화면 위쪽에서 설교 시간을 재요. 두 가지 방식 가운데 편한 쪽을 고르세요.</p>
+<ul>
+  <li><b class="k">타이머</b> — 정한 시간(예: 25분)에서 <b>거꾸로</b> 세요. “몇 분 남았지?”가 한눈에 보여요.</li>
+  <li><b class="k">스톱워치</b> — 00:00부터 <b>흘러간 시간</b>을 세요. “몇 분 했지?”가 한눈에 보여요.</li>
 </ul>
 <div class="two">
-  <figure><img style="width:230pt" src="../store/guide/web/library-select.jpg"><figcaption>원고 선택 — 여러 편 한 번에 지우기</figcaption></figure>
-  <figure><img style="width:165pt" src="../store/guide/web/settings.png"><figcaption>설정 — 백업 · 도움말 · 문의</figcaption></figure>
+  <figure><div class="shot" data-shot="timer"><img style="width:215pt" src="../store/guide/web/timer.png"></div><figcaption>타이머 설정 창 — 타이머 설정 버튼(25분)을 누르면 열려요</figcaption></figure>
+  <div class="txt">
+    <ol class="legend">
+      <li><i class="n">1</i><span><b>방식</b> — 타이머(거꾸로) · 스톱워치(흘러감)</span></li>
+      <li><i class="n">2</i><span><b>시간 정하기</b> — −5 · −1 · +1 · +5 분 (1~180분)</span></li>
+      <li><i class="n">3</i><span><b>자주 쓰는 시간</b> — 한 번에 고르기</span></li>
+      <li><i class="n">4</i><span><b>리셋</b> — 처음으로 되돌려요</span></li>
+      <li><i class="n">5</i><span><b>시작 · 멈춤</b></span></li>
+    </ol>
+    <h3>따라 해 보기</h3>
+    <ol class="steps">
+      <li>강단 화면 위쪽 <b class="k">타이머 설정 버튼</b>(시계 모양, 25분)을 눌러요.</li>
+      <li>맨 위에서 <b>타이머</b>나 <b>스톱워치</b>를 골라요.</li>
+      <li>설교 시간을 정해요. 칩(10분 ~ 60분)을 누르거나 −/+ 로 1분씩 맞춰요.</li>
+      <li>설교를 시작할 때 <b class="k">시작</b>을 누르거나, 위쪽 <b>시간 숫자를 탭</b>해요.</li>
+    </ol>
+  </div>
 </div>
-<div class="tip"><b>원고는 이 아이패드 안에만</b> — 강단노트에는 회원 가입도, 로그인도 없습니다. 원고와 필기는 이 기기 안에만 저장되고 어떤 서버로도 보내지 않습니다. 인터넷이 없는 예배당에서도 그대로 동작합니다.</div>
+<h3>설교 중에는 이렇게</h3>
+<ul>
+  <li><b>멈추기 · 이어서</b> — 위쪽 시간 숫자를 탭할 때마다 멈추고, 다시 탭하면 이어서 세요. 광고나 특송 시간을 빼고 싶을 때 좋아요.</li>
+  <li><b>리셋</b> — 타이머 설정 창의 <b class="k">리셋</b>을 누르면 처음으로 돌아가요(타이머는 정한 시간, 스톱워치는 00:00).</li>
+  <li><b>나갔다 와도 계속</b> — 준비 화면이나 서재로 잠깐 나가도, 앱을 닫았다 열어도 시간은 계속 흘러요.</li>
+  <li><b>지금 시각</b> — 타이머 바로 왼쪽에 지금 시각(예: 오전 10:52)이 보여요.</li>
+  <li><b>진행 줄</b> — 위쪽 막대 아래 가는 줄이 흐른 시간만큼 차올라요.</li>
+</ul>
 
-<h2 class="brk first"><span class="n">7</span>연습해 보기</h2>
+<h3 class="brk" style="margin-top:0">색으로 알려 줘요 — 타이머</h3>
+<table class="states">
+  <tr><td class="img"><img src="../store/guide/web/timer-idle.png"></td><td class="nm"><i class="dot" style="background:#231f1a"></i>대기</td><td>검은색. 정한 시간(25:00)과 ‘시작’이 보여요. 아직 세지 않는 상태예요.</td></tr>
+  <tr><td class="img"><img src="../store/guide/web/timer-run.png"></td><td class="nm"><i class="dot" style="background:#7c2433"></i>진행</td><td>버건디색. 점이 깜빡이며 남은 시간이 줄어요.</td></tr>
+  <tr><td class="img"><img src="../store/guide/web/timer-warn.png"></td><td class="nm"><i class="dot" style="background:#c98a1b"></i>막바지</td><td>주황색. 정한 시간의 80%가 지났어요(25분이면 20분부터). 마무리할 때예요.</td></tr>
+  <tr><td class="img"><img src="../store/guide/web/timer-over.png"></td><td class="nm"><i class="dot" style="background:#d93025"></i>넘음</td><td>빨간색. 정한 시간을 넘긴 만큼 <b>+분:초</b>로 보여 줘요.</td></tr>
+  <tr><td class="img"><img src="../store/guide/web/timer-paused.png"></td><td class="nm"><i class="dot" style="background:#8a7f72"></i>멈춤</td><td>회색. 시간을 다시 탭하면 이어서 세요.</td></tr>
+</table>
+
+<h3>스톱워치로 쓸 때</h3>
+<div class="two">
+  <figure><div class="shot"><img style="width:175pt" src="../store/guide/web/timer-sw.png"></div><figcaption>스톱워치를 고른 설정 창</figcaption></figure>
+  <div class="txt">
+    <p>스톱워치에서 정한 시간은 <b class="k">알려 줄 시간</b>이 돼요. 숫자는 0부터 올라가고, 색은 타이머와 똑같이 바뀌어요.</p>
+    <table class="states">
+      <tr><td class="img"><img src="../store/guide/web/sw-idle.png"></td><td>대기 — 00:00 · 시작</td></tr>
+      <tr><td class="img"><img src="../store/guide/web/sw-run.png"></td><td>진행 — 흘러간 시간 · 지남</td></tr>
+      <tr><td class="img"><img src="../store/guide/web/sw-over.png"></td><td>정한 시간을 넘으면 빨간색 · 넘음</td></tr>
+    </table>
+  </div>
+</div>
+<div class="tip warm"><b>설교 전에 한 번</b> — 예배 전에 강단 화면을 열어 타이머가 ‘대기’(검은색)인지 확인하세요. 지난주에 쓰던 시간이 남아 있다면 <b>리셋</b>을 눌러 두면 돼요.</div>
+
+<!-- 9 -->
+<h2 class="brk"><span class="n">9</span>원고 정리와 백업</h2>
+<h3 style="margin-top:0">여러 원고 한 번에 지우기</h3>
+<div class="two">
+  <figure><div class="shot" data-shot="library-select"><img style="width:180pt" src="../store/guide/web/library-select.jpg"></div><figcaption>원고 선택 — ‘지난 설교’를 누른 모습</figcaption></figure>
+  <div class="txt">
+    <ol class="steps">
+      <li>서재에서 <b class="k">원고 선택</b>을 눌러요. 카드를 <b>길게 눌러도</b> 돼요.</li>
+      <li>지울 원고를 탭해 골라요. 다시 탭하면 풀려요.</li>
+      <li>아래 막대에서 <b class="k">지우기</b>를 누르고 한 번 더 확인해요.</li>
+    </ol>
+    <ol class="legend">
+      <li><i class="n">1</i><span>고른 원고 — 체크 표시</span></li>
+      <li><i class="n">2</i><span><b>지난 설교 N편</b> — 파일 이름 날짜가 오늘보다 앞선 원고를 한 번에 골라요</span></li>
+      <li><i class="n">3</i><span><b>모두</b> — 전부 고르기 · 풀기</span></li>
+      <li><i class="n">4</i><span><b>지우기</b></span></li>
+      <li><i class="n">5</i><span><b>완료</b> — 선택 끝내기</span></li>
+    </ol>
+  </div>
+</div>
+<h3>백업하기 · 되살리기</h3>
+<div class="two">
+  <figure><div class="shot" data-shot="settings"><img style="width:165pt" src="../store/guide/web/settings.png"></div><figcaption>서재 오른쪽 위 설정(톱니바퀴)</figcaption></figure>
+  <div class="txt">
+    <ol class="legend">
+      <li><i class="n">1</i><span><b>사용 설명서 보기</b> — 이 설명서를 지웠어도 여기서 다시 열 수 있어요.</span></li>
+      <li><i class="n">2</i><span><b>백업 만들기</b> — 모든 원고와 필기를 파일 하나로 묶어요. 공유 시트에서 ‘파일에 저장’ → iCloud Drive나 구글 드라이브에 보관하세요.</span></li>
+      <li><i class="n">3</i><span><b>백업에서 복원</b> — 백업 파일을 고르면 원고와 필기가 돌아와요. 이미 있는 원고는 필기가 더 최근인 쪽을 남겨요.</span></li>
+      <li><i class="n">4</i><span><b>문의하기</b> — 불편한 점이나 바라는 기능을 메일로 보내 주세요.</span></li>
+    </ol>
+  </div>
+</div>
+<div class="tip warm"><b>꼭 백업해 두세요</b> — 원고와 필기는 이 아이패드 안에만 있어요. 아이패드를 바꾸거나 앱을 지우기 전, 그리고 한 달에 한 번쯤 백업 파일을 만들어 두면 안심이에요.</div>
+
+<!-- 10 -->
+<h2 class="brk"><span class="n">10</span>자주 묻는 질문</h2>
+<div class="faq">
+<h3 style="margin-top:4pt">구글 드라이브를 누르면 계속 ‘로드 중’이에요</h3>
+<p>아이패드 운영체제(iPadOS)를 업데이트한 직후, 구글 드라이브가 파일 앱과 이어지는 부분이 멈추는 일이 있어요. <b>파일 앱에서 구글 드라이브를 열어도 똑같이 멈춘다면</b> 강단노트가 아니라 구글 드라이브 쪽 문제예요. 이렇게 해 보세요.</p>
+<ul>
+  <li><b>구글 드라이브 앱</b>을 열고 원고 옆 점 세 개(더 보기) → <b class="k">다음에서 열기</b>(또는 사본 보내기) → <b>강단노트</b>를 고르면 바로 들어와요.</li>
+  <li>구글 드라이브 앱과 iPadOS를 최신으로 업데이트하고, 아이패드를 한 번 껐다 켜 보세요. 대개 여기서 풀려요.</li>
+  <li>자주 쓰는 원고는 <b>iCloud Drive</b>에 넣어 두면 더 안정적이에요.</li>
+</ul>
+<h3>펜슬로 써지지 않아요</h3>
+<ul>
+  <li><b>강단</b> 화면인지 확인하세요. 강단에서는 필기가 꺼져 있어요 → 오른쪽 위 <b>준비</b>를 누르세요.</li>
+  <li>도구가 <b>선택(올가미)</b>으로 되어 있으면 둘러싸기만 돼요 → 펜이나 형광펜을 고르세요.</li>
+</ul>
+<h3>손가락으로 쓰고 싶어요</h3>
+<p>도구 막대 맨 오른쪽 <b>손 모양 버튼</b>을 켜세요. 이때는 두 손가락으로 원고를 넘겨요.</p>
+<h3>강단에서 화면이 꺼져요</h3>
+<p>강단 화면 위쪽 자물쇠가 초록색인지 확인하세요. 화면 꺼짐 방지는 강단 화면에서만 켜져요. 그래도 꺼진다면 아이패드 설정 › 디스플레이 및 밝기 › 자동 잠금을 확인해 주세요.</p>
+<h3>원고를 잘못 지웠어요</h3>
+<p>백업 파일이 있다면 설정 › <b>백업에서 복원</b>으로 되살릴 수 있어요. 원고 PDF는 다시 불러올 수 있지만, 필기는 백업에만 남아 있어요.</p>
+<h3>새 아이패드로 옮기고 싶어요</h3>
+<p>쓰던 아이패드에서 <b>백업 만들기</b> → iCloud Drive에 저장 → 새 아이패드에 강단노트를 설치하고 <b>백업에서 복원</b>을 누르면 원고와 필기가 그대로 옮겨져요.</p>
+<h3>한글(hwp) · 워드 파일은 안 되나요?</h3>
+<p>지금은 PDF만 열 수 있어요. 한글이나 워드에서 PDF로 저장해 불러오세요(1장). 쓰신 글꼴과 모양이 그대로 보여서 오히려 설교 원고에는 PDF가 더 좋아요.</p>
+<h3>이 설명서를 지웠어요</h3>
+<p>서재 오른쪽 위 설정 › <b>사용 설명서 보기</b>를 누르면 다시 열려요.</p>
+</div>
+
+<!-- 11 -->
+<h2 class="brk"><span class="n">11</span>연습해 보기</h2>
 <div class="practice">
-<p><span class="try">① 애플펜슬로 이 문장 아래에 밑줄을 그어 보세요.</span> 펜슬로는 글씨가 써지고, 손가락으로는 화면이 넘어갑니다.</p>
-<p><span class="try">② 아래 문장에 형광펜을 대충 곧게 그어 보세요.</span> 반듯한 줄로 정리됩니다.</p>
+<p><span class="try">① 애플펜슬로 이 문장 아래에 밑줄을 그어 보세요.</span> 펜슬로는 글씨가 써지고, 손가락으로는 화면이 넘어가요.</p>
+<p><span class="try">② 아래 문장에 형광펜을 대충 곧게 그어 보세요.</span> 반듯한 줄로 정리돼요.</p>
 <p class="q">주님은 나의 목자이시기에, 오늘 우리가 걷는 길도 이미 알고 계십니다.</p>
 <p><span class="try">③ 위에 그은 밑줄의 가운데만 부분 지우개로 지워 보세요.</span></p>
 <p><span class="try">④ 선택 도구로 형광펜을 둘러싸 고른 뒤, 끌어서 옮기고, 오른쪽 아래 손잡이로 키우고, ↻ 손잡이로 돌려 보세요.</span></p>
-<p><span class="try">⑤ 두 손가락으로 벌려 크게 보고, 메뉴의 ‘맞춤’으로 돌아와 보세요.</span></p>
-<p><span class="try">⑥ 오른쪽 위 ‘강단’을 누르고 화면 오른쪽을 탭해 넘겨 보세요.</span> 타이머 설정 버튼에서 5분을 고르고 시간을 탭하면 타이머가 버건디색으로 돌아갑니다.</p>
-<p>좋은 설교는 책상에서 한 번, 강단에서 또 한 번 완성됩니다. 책상에서는 원고를 고치고 표시하며 준비하고, 강단에서는 그 표시를 따라 말씀을 전합니다.</p>
+<p><span class="try">⑤ 위쪽 목록 버튼으로 쪽 미리보기를 열고, 1쪽을 눌러 처음으로 돌아가 보세요.</span></p>
+<p><span class="try">⑥ 두 손가락으로 벌려 크게 보고, 메뉴의 ‘맞춤’으로 돌아와 보세요.</span></p>
+<p><span class="try">⑦ 오른쪽 위 ‘강단’을 누르고 화면 오른쪽을 탭해 넘겨 보세요.</span> 타이머 설정에서 5분을 고르고 시간을 탭하면 버건디색으로 돌아가요. 스톱워치로도 바꿔 보세요.</p>
+<p>좋은 설교는 책상에서 한 번, 강단에서 또 한 번 완성돼요. 책상에서는 원고를 고치고 표시하며 준비하고, 강단에서는 그 표시를 따라 말씀을 전해요.</p>
 </div>
 <p class="end">문의 lovewords10@gmail.com · © 2026 Yeol Studio<br>준비하는 책상에서도, 말씀을 전하는 강단에서도 늘 곁에 있겠습니다.</p>
+
+<script src="../store/guide/web/marks.js"></script>
+<script>
+// 그림 위에 번호 얹기: 찍을 때 잰 요소 자리를 그림 크기에 대한 %로 바꿔, 요소 바깥쪽에 둔다
+const G = '10pt';
+for (const el of document.querySelectorAll('.shot[data-shot]')) {
+  const m = (window.MARKS || {})[el.dataset.shot];
+  if (!m) continue;
+  for (const k of m.marks) {
+    const X = v => v / m.w * 100, Y = v => v / m.h * 100, cx = X((k.l + k.r) / 2), cy = Y((k.t + k.b) / 2);
+    const [left, top] = {
+      below: [`${cx}%`, `calc(${Y(k.b)}% + ${G})`], above: [`${cx}%`, `calc(${Y(k.t)}% - ${G})`],
+      left: [`calc(${X(k.l)}% - ${G})`, `${cy}%`], right: [`calc(${X(k.r)}% + ${G})`, `${cy}%`],
+    }[k.at];
+    const i = document.createElement('i');
+    i.className = 'mk'; i.textContent = k.n;
+    Object.assign(i.style, { left, top });
+    el.append(i);
+  }
+}
+</script>
 </body>
 </html>
