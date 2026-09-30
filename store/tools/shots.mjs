@@ -139,7 +139,7 @@ await sleep(2600);
 await page.keyboard.press('ArrowLeft');
 await sleep(2800);
 await shot('4-pulpit-dark');
-await page.evaluate(() => { document.getElementById('pTheme').click(); document.getElementById('pExit').click(); });
+await page.evaluate(() => { document.getElementById('pTheme').click(); document.querySelector('#modeSeg [data-mode=prep]').click(); });
 await sleep(400);
 
 // 7) 설정(백업 · 개인정보)
