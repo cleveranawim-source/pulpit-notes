@@ -1704,21 +1704,25 @@ const saveTimerState = () => writeLS('pn.timer', { start: T.start, acc: T.acc, r
 const elapsed = () => T.acc + (T.running ? Date.now() - T.start : 0);
 const mmss = ms => { const s = Math.floor(Math.max(0, ms) / 1000); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
 function startTick() { stopTick(); tick(); tickTimer = setInterval(tick, 500); }
+// 0.5초마다 부르지만 글자·색·막대가 실제로 바뀔 때만 건드린다(가만히 있는 화면을 다시 그리지 않게)
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+const setClass = (el, v) => { if (el.className !== v) el.className = v; };
 function stopTick() { clearInterval(tickTimer); tickTimer = 0; }
 function tick() {
   const now = new Date();
-  $('#pClock').textContent = `${now.getHours() < 12 ? '오전' : '오후'} ${(now.getHours() % 12) || 12}:${String(now.getMinutes()).padStart(2, '0')}`;
+  setText($('#pClock'), `${now.getHours() < 12 ? '오전' : '오후'} ${(now.getHours() % 12) || 12}:${String(now.getMinutes()).padStart(2, '0')}`);
   const e = elapsed(), tgt = settings.target * 60000, prog = $('#tprog'), idle = !T.running && e === 0;
-  $('#pTargetTxt').textContent = `${settings.target}분`;
+  setText($('#pTargetTxt'), `${settings.target}분`);
   const left = tgt - e, f = e / tgt, up = settings.timerMode === 'up';
   const txt = up ? mmss(e) : left >= 0 ? mmss(left + 999) : '+' + mmss(-left); // 남은 시간은 올림으로(25:00부터)
   const sub = idle ? '시작' : !T.running ? '멈춤' : left < 0 ? '넘음' : up ? '지남' : '남음';
   const state = idle ? '' : !T.running ? 'paused' : f >= 1 ? 'over' : f >= 0.8 ? 'warn' : 'run';
-  prog.style.width = Math.min(100, f * 100) + '%';
-  prog.className = 'tprog pulpit-only' + (f >= 1 ? ' over' : f >= 0.8 ? ' warn' : '');
-  $('#pTimerTxt').textContent = txt;
-  $('#pTimerSub').textContent = sub;
-  $('#pTimer').className = 'pill timer' + (state ? ' ' + state : '');
+  const sx = String(Math.round(Math.min(1, f) * 2000) / 2000); // 막대 폭의 1/2000(1px 안팎)씩
+  if (prog.dataset.sx !== sx) { prog.dataset.sx = sx; prog.style.transform = `scaleX(${sx})`; }
+  setClass(prog, 'tprog pulpit-only' + (f >= 1 ? ' over' : f >= 0.8 ? ' warn' : ''));
+  setText($('#pTimerTxt'), txt);
+  setText($('#pTimerSub'), sub);
+  setClass($('#pTimer'), 'pill timer' + (state ? ' ' + state : ''));
 }
 function toggleTimer() {
   if (T.running) { T.acc += Date.now() - T.start; T.running = false; }

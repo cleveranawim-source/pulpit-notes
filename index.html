@@ -198,16 +198,16 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .timer .tt{font-size:21px;font-weight:800;letter-spacing:.02em;color:var(--tc)}
 .timer small{font-size:12px;font-weight:600;color:var(--tc);opacity:.85}
 .timer .dot{width:9px;height:9px;border-radius:50%;background:var(--tc);opacity:.5}
-.timer.run .dot{opacity:1;animation:pulse 1.6s infinite}
+.timer.run .dot{opacity:1}
 .timer.run{--tc:var(--accent)}.timer.warn{--tc:var(--warn)}.timer.over{--tc:#D93025}.timer.paused{--tc:var(--ink-2)}
 #reader[data-theme="dark"] .timer{--tc:#F1EBE1}
 #reader[data-theme="dark"] .timer.run{--tc:#E8909E}#reader[data-theme="dark"] .timer.warn{--tc:#F2B84B}
 #reader[data-theme="dark"] .timer.over{--tc:#FF7A6E}#reader[data-theme="dark"] .timer.paused{--tc:#B8AFA2}
-@keyframes pulse{50%{opacity:.35}}
 .tset{font-size:14px!important;color:var(--ink-2);border:1px solid rgba(0,0,0,.12)}
 .tset svg.i{width:17px;height:17px}
 #reader[data-theme="dark"] .tset{border-color:rgba(255,255,255,.16);color:#B8AFA2}
-.tprog{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:var(--accent);transition:width .5s linear,background .4s}
+/* 진행 막대: 폭 애니메이션은 매 프레임 다시 그려 발열이 컸다 → 늘어날 때만 transform 으로 한 번씩 */
+.tprog{position:absolute;left:0;bottom:-1px;height:3px;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:background .4s}
 .tprog.warn{background:var(--warn)}.tprog.over{background:#D93025}
 .wake{color:var(--ok)}.wake.off{color:var(--ink-3)}
 /* 타이머 설정 창 */
