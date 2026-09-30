@@ -509,9 +509,12 @@ function getAnchor() {
 function layout(anchor) {
   if (!R) return;
   anchor ??= getAnchor();
+  // 옆으로 보던 자리(화면 가운데가 원고 폭의 몇 %였는지, 스크롤할 때마다 기억) — 돌리거나 미리보기를 여닫아도 그대로
+  const cxf = R.hx ?? 0.5;
   const cs = getComputedStyle(pagesEl), padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   const zoom = settings.zoom || 1;
-  const avail = Math.round(Math.floor(Math.min(1200, scroller.clientWidth - padX)) * zoom);
+  // 맞춤(100%) = 화면 폭에 딱. 상한 1600은 큰 모니터의 웹판용이라 아이패드(가로 13인치 1376)는 늘 폭을 꽉 채운다
+  const avail = Math.round(Math.floor(Math.min(1600, scroller.clientWidth - padX)) * zoom);
   // 100%보다 크게 보면 옆으로도 움직일 수 있게
   pagesEl.style.width = zoom > 1 ? avail + padX + 'px' : '';
   scroller.classList.toggle('zoomed', zoom > 1);
@@ -528,6 +531,8 @@ function layout(anchor) {
   R.width = scroller.clientWidth;
   const A = R.pages[clamp(anchor.i, 0, R.pages.length - 1)];
   scroller.scrollTop = A.top + anchor.f * A.dh;
+  scroller.scrollLeft = zoom > 1 ? cxf * scroller.scrollWidth - scroller.clientWidth / 2 : 0;
+  R.hx = cxf;
   renderSel();
   updateVisible();
 }
@@ -594,6 +599,7 @@ function curPage() {
 
 let scrollRaf = 0, posTimer = 0;
 scroller.addEventListener('scroll', () => {
+  if (R && scroller.scrollWidth > scroller.clientWidth + 1 && scroller.clientWidth === R.width) R.hx = (scroller.scrollLeft + scroller.clientWidth / 2) / scroller.scrollWidth;
   if (scrollRaf) return;
   scrollRaf = requestAnimationFrame(() => {
     scrollRaf = 0;
@@ -953,22 +959,52 @@ function addPoint(ev, draw) {
   const m = n + 1;
   if (draw && m >= 3) { strokeStyle(P.ictx, S); drawQuad(P.ictx, S, P, m - 2); }
 }
-// 형광펜을 거의 곧게 그었다면 반듯한 직선으로(글줄에 맞춰 수평이면 수평으로)
+// 형광펜을 대충 곧게 그었다면 반듯한 직선으로(거의 수평이면 수평으로). 너그럽게 본다:
+// - 펜을 대고 뗄 때 생기는 양 끝 삐침은 판단에서 뺀다(굵기 1.5배와 쪽 폭 2.5%≈5mm 중 큰 값, 전체 길이 15%까지)
+// - 시작·끝점을 잇는 대신 가운데 부분 전체에 가장 잘 맞는 직선(주축)으로 흔들림을 잰다
+// - 허용 흔들림 = 굵기의 70% · 길이의 3% · 쪽 폭의 1% 가운데 큰 값(가는 형광펜도 너무 빡빡하지 않게)
+// 그대로 두는 것: 짧은 획 · 왕복 칠하기 · 동그라미 · 굵기의 80% 넘게 휜 곡선 · 크게 출렁이는 물결
 function straighten(S, P) {
   const n = S.p.length / 3;
   if (n < 3) return;
-  const A = ptAt(S, P, 0), B = ptAt(S, P, n - 1);
-  const dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy), w = S.w * P.w;
-  if (len < w * 2.5) return;
-  let dev = 0;
-  for (let k = 1; k < n - 1; k++) {
-    const p = ptAt(S, P, k);
-    dev = Math.max(dev, Math.abs((p[0] - A[0]) * dy - (p[1] - A[1]) * dx) / len);
+  const pts = Array.from({ length: n }, (_, k) => ptAt(S, P, k)), w = S.w * P.w;
+  const acc = [0];
+  for (let k = 1; k < n; k++) acc.push(acc[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+  const arc = acc[n - 1], trim = Math.min(arc * 0.15, Math.max(w * 1.5, P.w * 0.025));
+  let core = pts.filter((_, k) => acc[k] >= trim && acc[k] <= arc - trim);
+  if (core.length < 3) core = pts;
+  let mx = 0, my = 0;
+  for (const [x, y] of core) { mx += x; my += y; }
+  mx /= core.length; my /= core.length;
+  let sxx = 0, syy = 0, sxy = 0;
+  for (const [x, y] of core) { const dx = x - mx, dy = y - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+  const ang = 0.5 * Math.atan2(2 * sxy, sxx - syy), ux = Math.cos(ang), uy = Math.sin(ang);
+  const along = ([x, y]) => (x - mx) * ux + (y - my) * uy, across = ([x, y]) => (y - my) * ux - (x - mx) * uy;
+  let t0 = Infinity, t1 = -Infinity;
+  for (const p of pts) { const t = along(p); t0 = Math.min(t0, t); t1 = Math.max(t1, t); }
+  const len = t1 - t0;
+  if (len < w * 2) return;                                   // 너무 짧은 획
+  // 왕복 칠하기 · 동그라미: 그은 방향을 거슬러 되돌아간 거리가 크다
+  const dir = Math.sign(along(core[core.length - 1]) - along(core[0])) || 1;
+  let back = 0;
+  for (let k = 1; k < core.length; k++) back += Math.max(0, -dir * (along(core[k]) - along(core[k - 1])));
+  if (back > len * 0.2 + w * 0.5) return;
+  // 흔들림: 가장 잘 맞는 직선에서 너무 멀리 벗어난 곳이 없어야
+  const tol = Math.max(w * 0.7, len * 0.03, P.w * 0.01);
+  for (const p of core) if (Math.abs(across(p)) > tol) return;
+  // 휜 정도: 가운데 부분에 포물선을 맞춰 전체 길이에서 얼마나 볼록한지 잰다
+  let s1 = 0, s2 = 0, s3 = 0, s4 = 0, v0 = 0, v1 = 0, v2 = 0;
+  for (const p of core) { const u = along(p), v = across(p), u2 = u * u; s1 += u; s2 += u2; s3 += u2 * u; s4 += u2 * u2; v0 += v; v1 += u * v; v2 += u2 * v; }
+  const s0 = core.length, det3 = (a, b, c, d, e, f, g, h, i) => a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  const D = det3(s4, s3, s2, s3, s2, s1, s2, s1, s0);
+  if (Math.abs(D) > 1e-9) {
+    const a = det3(v2, s3, s2, v1, s2, s1, v0, s1, s0) / D;
+    if (Math.abs(a) * (len / 2) ** 2 > Math.max(w * 0.8, len * 0.03)) return;
   }
-  if (dev > w * 0.45) return;
-  let ay = A[1], by = B[1];
-  if (Math.abs(dy) < Math.abs(dx) * 0.1) ay = by = (A[1] + B[1]) / 2;
-  S.p = [A[0] / P.w, ay / P.h, 0.5, B[0] / P.w, by / P.h, 0.5];
+  if (along(pts[0]) > along(pts[n - 1])) [t0, t1] = [t1, t0]; // 그은 방향 유지
+  const A = [mx + ux * t0, my + uy * t0], B = [mx + ux * t1, my + uy * t1];
+  if (Math.abs(uy) < 0.14) A[1] = B[1] = my;                 // 약 8° 안쪽이면 수평으로
+  S.p = [A[0] / P.w, A[1] / P.h, 0.5, B[0] / P.w, B[1] / P.h, 0.5];
 }
 
 // ── 획 기하 ──
