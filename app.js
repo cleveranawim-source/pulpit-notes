@@ -299,7 +299,7 @@ function cardMenu(anchor, d) {
   });
 }
 
-async function importFiles(files) {
+async function importFiles(files, { open = true } = {}) {
   const list = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
   const nfc = f => f.name.normalize('NFC'); // 맥·iOS에서 온 한글 이름은 자모가 풀린(NFD) 채로 온다
   if (!list.length) { toast('PDF 파일만 불러올 수 있어요'); return; }
@@ -330,7 +330,7 @@ async function importFiles(files) {
   }
   busy();
   await renderLibrary();
-  if (added === 1 && list.length === 1) openDoc(lastId);
+  if (added === 1 && list.length === 1 && open) openDoc(lastId);
   else if (added > 1) toast(`원고 ${added}개를 불러왔어요`);
 }
 
@@ -379,7 +379,7 @@ async function analyze(pdf, onPage) {
 
 $('#btnImport').onclick = () => fileInput.click();
 $('#empty [data-act=import]').onclick = () => fileInput.click();
-$('#empty [data-act=sample]').onclick = () => openSample();
+$('#empty [data-act=sample]').onclick = () => openGuide();
 $('#empty [data-act=howto]').onclick = () => openPdfHowto();
 $('#btnSettings').onclick = () => openSettings();
 $$('#sortSeg button').forEach(b => b.onclick = () => { settings.sort = b.dataset.sort; saveSettings(); renderLibrary(); });
@@ -660,6 +660,7 @@ function inSelBox(x, y, pad = 26) {
 pagesEl.addEventListener('pointerdown', e => {
   if (e.target.closest('.selbar')) return;
   if (e.target.closest('.selhandle') && R?.sel && !live) { startScale(e); return; }
+  if (e.target.closest('.selrot') && R?.sel && !live) { startRotate(e); return; }
   const role = pointerRole(e);
   if (e.pointerType === 'pen' && settings.finger) {
     settings.finger = false; saveSettings(); refreshPalette();
@@ -694,6 +695,7 @@ pagesEl.addEventListener('pointermove', e => {
   if (e.pointerId !== live.id) return;
   if (live.kind === 'move') { moveMove(e); return; }
   if (live.kind === 'scale') { scaleMove(e); return; }
+  if (live.kind === 'rotate') { rotateMove(e); return; }
   const evs = e.getCoalescedEvents?.();
   for (const ev of (evs?.length ? evs : [e])) {
     if (live.kind === 'erase') eraseMove(ev);
@@ -874,6 +876,7 @@ function finishLive() {
   if (L.kind === 'lasso') return finishLasso(L);
   if (L.kind === 'move') return finishMove(L, true);
   if (L.kind === 'scale') return finishScale(L, true);
+  if (L.kind === 'rotate') return finishRotate(L, true);
   const { P, S } = L;
   if (!S.p.length) return;
   if (S.t === 'hl') straighten(S, P);
@@ -889,6 +892,7 @@ function cancelLive() {
   if (L.kind === 'lasso') { L.svg.remove(); return; }
   if (L.kind === 'move') return finishMove(L, false);
   if (L.kind === 'scale') return finishScale(L, false);
+  if (L.kind === 'rotate') return finishRotate(L, false);
   redrawInk(L.P);
 }
 
@@ -1136,8 +1140,9 @@ function renderSel() {
   el.innerHTML = `<div class="selbar"><span class="cnt"></span>
     <button data-a="del"><svg class="i"><use href="#i-trash"/></svg>지우기</button>
     <button data-a="off" aria-label="선택 해제"><svg class="i"><use href="#i-x"/></svg></button></div>
-    <span class="selhandle" aria-label="크기 조절"></span>`;
-  el.querySelector('.cnt').textContent = `${R.sel.set.size}획 선택 · 끌면 이동 · 모서리로 크기`;
+    <span class="selhandle" aria-label="크기 조절"></span>
+    <span class="selrot" aria-label="회전"><svg class="i"><use href="#i-rotate"/></svg></span>`;
+  el.querySelector('.cnt').textContent = `${R.sel.set.size}획 선택 · 끌면 이동 · ◢ 크기 · ↻ 회전`;
   el.querySelector('[data-a=del]').onclick = deleteSel;
   el.querySelector('[data-a=off]').onclick = clearSel;
   P.el.append(el);
@@ -1226,6 +1231,7 @@ function startScale(e) {
   for (const S of set) if (S.t !== 'hl') drawStroke(fc, S, P);
   f.style.transformOrigin = `${(b[0] - live.ox) * P.s}px ${(b[1] - live.oy) * P.s}px`;
   R.sel.el.before(f);
+  R.sel.el.classList.add('sel-active');
   live.float = f;
   redrawInk(P, set);
   // 쪽(보이는 영역) 밖으로 나가지 않는 최대 배율
@@ -1250,6 +1256,65 @@ function finishScale(L, commit) {
     if (!R.sel.set.has(S)) continue;
     const p = S.p.map((v, k) => k % 3 === 0 ? r5((b[0] + (v * P.w - b[0]) * s) / P.w) : k % 3 === 1 ? r5((b[1] + (v * P.h - b[1]) * s) / P.h) : v);
     list[j] = { ...S, w: r5(Math.max(0.0005, S.w * s)), p };
+    set.add(list[j]);
+  }
+  R.sel.set = set;
+  pushHist({ t: 'snap', page: P.i, before, after: [...list] });
+  redrawInk(P);
+  renderSel();
+}
+
+// ── 고른 필기 회전: 선택 상자 가운데를 축으로, 왼쪽 아래 ↻ 손잡이를 돌린다(0·90·180°에 달라붙음) ──
+function startRotate(e) {
+  const el = e.target.closest('.page'), P = R.pages[R.sel.page];
+  if (!el || +el.dataset.i !== P.i || !P.ictx) return;
+  e.preventDefault();
+  try { e.target.setPointerCapture(e.pointerId); } catch {}
+  const r = el.getBoundingClientRect(), c = cropBox(), set = R.sel.set, b = selBounds(P, set);
+  live = { id: e.pointerId, pt: e.pointerType, P, rect: r, ox: c.x0 * P.w, oy: c.y0 * P.h, kind: 'rotate', deg: 0, cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2 };
+  const [x, y] = pagePt(live, e);
+  live.a0 = Math.atan2(y - live.cy, x - live.cx);
+  const f = document.createElement('canvas');
+  f.className = 'ink float';
+  f.width = P.ink.width; f.height = P.ink.height;
+  const fc = f.getContext('2d');
+  fc.setTransform(...inkTransform(P));
+  for (const S of set) if (S.t === 'hl') drawStroke(fc, S, P);
+  for (const S of set) if (S.t !== 'hl') drawStroke(fc, S, P);
+  f.style.transformOrigin = `${(live.cx - live.ox) * P.s}px ${(live.cy - live.oy) * P.s}px`;
+  R.sel.el.before(f);
+  R.sel.el.classList.add('sel-active');
+  live.lab = Object.assign(document.createElement('span'), { className: 'selangle', textContent: '0°' });
+  R.sel.el.append(live.lab);
+  live.float = f;
+  redrawInk(P, set);
+}
+function rotateMove(ev) {
+  const L = live, [x, y] = pagePt(L, ev);
+  let deg = (Math.atan2(y - L.cy, x - L.cx) - L.a0) * 180 / Math.PI;
+  deg = ((deg + 540) % 360) - 180; // -180 ~ 180
+  for (const m of [-180, -90, 0, 90, 180]) if (Math.abs(deg - m) < 4) deg = m;
+  L.deg = deg;
+  L.float.style.transform = R.sel.el.style.transform = `rotate(${deg}deg)`;
+  L.lab.textContent = `${Math.round(deg)}°`;
+  L.lab.style.transform = `translate(-50%, -50%) rotate(${-deg}deg)`;
+}
+function finishRotate(L, commit) {
+  const P = L.P;
+  L.float.remove();
+  if (!commit || Math.abs(L.deg) < 0.5) { redrawInk(P); renderSel(); return; }
+  const t = L.deg * Math.PI / 180, cos = Math.cos(t), sin = Math.sin(t);
+  const list = R.ink.pages[P.i], before = [...list], set = new Set();
+  for (let j = 0; j < list.length; j++) {
+    const S = list[j];
+    if (!R.sel.set.has(S)) continue;
+    const p = S.p.slice();
+    for (let k = 0; k < p.length; k += 3) {
+      const X = p[k] * P.w - L.cx, Y = p[k + 1] * P.h - L.cy;
+      p[k] = r5((L.cx + X * cos - Y * sin) / P.w);
+      p[k + 1] = r5((L.cy + X * sin + Y * cos) / P.h);
+    }
+    list[j] = { ...S, p };
     set.add(list[j]);
   }
   R.sel.set = set;
@@ -1558,6 +1623,7 @@ function turn(dir) {
 // ── 시계·설교 타이머 ──
 // 설교 시간을 분으로 정하면 남은 시간이 줄어드는 카운트다운. 0분(시간 없음)이면 흐른 시간만 센다.
 const T = Object.assign({ start: 0, acc: 0, running: false }, readLS('pn.timer', {}));
+if (!(settings.target >= 1)) settings.target = 25;
 let tickTimer = 0;
 const saveTimerState = () => writeLS('pn.timer', { start: T.start, acc: T.acc, running: T.running });
 const elapsed = () => T.acc + (T.running ? Date.now() - T.start : 0);
@@ -1568,21 +1634,13 @@ function tick() {
   const now = new Date();
   $('#pClock').textContent = `${now.getHours() < 12 ? '오전' : '오후'} ${(now.getHours() % 12) || 12}:${String(now.getMinutes()).padStart(2, '0')}`;
   const e = elapsed(), tgt = settings.target * 60000, prog = $('#tprog'), idle = !T.running && e === 0;
-  $('#pTargetTxt').textContent = settings.target ? `${settings.target}분` : '시간 없음';
-  let txt, sub, state;
-  if (tgt) {
-    const left = tgt - e, f = e / tgt;
-    txt = left >= 0 ? mmss(left + 999) : '+' + mmss(-left); // 남은 시간은 올림으로(25:00부터)
-    sub = idle ? '시작' : !T.running ? '멈춤' : left < 0 ? '넘음' : '남음';
-    state = idle ? '' : !T.running ? 'paused' : f >= 1 ? 'over' : f >= 0.8 ? 'warn' : 'run';
-    prog.style.width = Math.min(100, f * 100) + '%';
-    prog.className = 'tprog pulpit-only' + (f >= 1 ? ' over' : f >= 0.8 ? ' warn' : '');
-  } else {
-    txt = mmss(e);
-    sub = idle ? '시작' : T.running ? '지남' : '멈춤';
-    state = idle ? '' : T.running ? 'run' : 'paused';
-    prog.style.width = '0';
-  }
+  $('#pTargetTxt').textContent = `${settings.target}분`;
+  const left = tgt - e, f = e / tgt;
+  const txt = left >= 0 ? mmss(left + 999) : '+' + mmss(-left); // 남은 시간은 올림으로(25:00부터)
+  const sub = idle ? '시작' : !T.running ? '멈춤' : left < 0 ? '넘음' : '남음';
+  const state = idle ? '' : !T.running ? 'paused' : f >= 1 ? 'over' : f >= 0.8 ? 'warn' : 'run';
+  prog.style.width = Math.min(100, f * 100) + '%';
+  prog.className = 'tprog pulpit-only' + (f >= 1 ? ' over' : f >= 0.8 ? ' warn' : '');
   $('#pTimerTxt').textContent = txt;
   $('#pTimerSub').textContent = sub;
   $('#pTimer').className = 'pill timer' + (state ? ' ' + state : '');
@@ -1598,23 +1656,21 @@ $('#pTarget').onclick = e => openMenu(e.currentTarget, m => {
   m.append(h('div', 'lbl', '설교 타이머 — 정한 시간에서 거꾸로 세어요'));
   const box = h('div', 'tpop');
   box.innerHTML = `<div class="dial"><button data-d="-5">−5</button><button data-d="-1">−1</button><b></b><button data-d="1">+1</button><button data-d="5">+5</button></div>
-    <div class="chips"></div><div class="row"><button class="btn" data-a="reset">처음으로</button><button class="btn primary" data-a="go"></button></div><p class="note"></p>`;
+    <div class="chips"></div><div class="row"><button class="btn" data-a="reset"><svg class="i"><use href="#i-reset"/></svg>리셋</button><button class="btn primary" data-a="go"></button></div><p class="note"></p>`;
   const chips = box.querySelector('.chips');
-  for (const v of [0, 10, 15, 20, 25, 30, 35, 40, 50, 60]) {
-    const c = Object.assign(document.createElement('button'), { textContent: v ? `${v}분` : '없음' });
+  for (const v of [10, 15, 20, 25, 30, 35, 40, 45, 50, 60]) {
+    const c = Object.assign(document.createElement('button'), { textContent: `${v}분` });
     c.dataset.v = v;
     c.onclick = () => { settings.target = v; saveSettings(); show(); tick(); };
     chips.append(c);
   }
   const show = () => {
-    box.querySelector('.dial b').innerHTML = settings.target ? `${settings.target}<small>분</small>` : '<small>시간 없음</small>';
+    box.querySelector('.dial b').innerHTML = `${settings.target}<small>분</small>`;
     chips.querySelectorAll('button').forEach(c => c.classList.toggle('on', +c.dataset.v === settings.target));
     box.querySelector('[data-a=go]').textContent = T.running ? '멈춤' : elapsed() ? '이어서' : '시작';
-    box.querySelector('.note').textContent = settings.target
-      ? '위쪽 시간을 탭해도 시작 · 멈춤이 돼요. 시간이 지나면 빨간색으로 넘은 시간을 보여 줘요.'
-      : '시간을 정하지 않으면 흐른 시간만 세요.';
+    box.querySelector('.note').textContent = '위쪽 시간을 탭해도 시작 · 멈춤이 돼요. 리셋은 정한 시간으로 되돌려요. 시간이 지나면 빨간색으로 넘은 시간을 보여 줘요.';
   };
-  box.querySelectorAll('[data-d]').forEach(bt => bt.onclick = () => { settings.target = clamp(settings.target + +bt.dataset.d, 0, 180); saveSettings(); show(); tick(); });
+  box.querySelectorAll('[data-d]').forEach(bt => bt.onclick = () => { settings.target = clamp(settings.target + +bt.dataset.d, 1, 180); saveSettings(); show(); tick(); });
   box.querySelector('[data-a=reset]').onclick = () => { resetTimer(); show(); };
   box.querySelector('[data-a=go]').onclick = () => { toggleTimer(); show(); };
   show();
@@ -1790,7 +1846,7 @@ function openSettings() {
     const last = readLS('pn.lastBackup', 0);
     body.append(
       h('div', 'sgroup-t', '처음이라면'),
-      row('#i-book', '예시 원고로 사용법 보기', '연습장처럼 마음껏 써 볼 수 있는 원고', () => { closeSheet(); openSample(); }),
+      row('#i-book', '사용 설명서 보기', '쓰는 법을 한눈에 — 연습장처럼 써 봐도 돼요', () => { closeSheet(); openGuide(); }),
       row('#i-help', '원고를 PDF로 만드는 법', '한글 · 워드 · Pages · 구글 문서', () => openPdfHowto()),
       h('div', 'sgroup-t', '백업'),
       row('#i-backup', '백업 만들기', last ? `마지막 백업 ${ago(last)}` : '아직 백업한 적이 없어요', () => { closeSheet(); makeBackup(); }),
@@ -1833,7 +1889,7 @@ function openLicenses() {
       ['PDF.js', 'Apache License 2.0', 'Mozilla Foundation — PDF를 화면에 그립니다.'],
       ['pdf-lib', 'MIT License', 'Andrew Dillon — 필기를 PDF에 담습니다.'],
       ['고운바탕 (Gowun Batang)', 'SIL Open Font License 1.1', 'The Gowun Batang Project Authors — 서재 제목 글꼴'],
-      ['Pretendard', 'SIL Open Font License 1.1', 'Kil Hyung-jin — 예시 원고 글꼴'],
+      ['Pretendard', 'SIL Open Font License 1.1', 'Kil Hyung-jin — 사용 설명서 글꼴'],
     ]) {
       const r = h('div', 'lic');
       r.append(h('b', '', name), h('span', '', lic), h('small', '', note));
@@ -1855,20 +1911,30 @@ function openPrivacy() {
   });
 }
 
-// ── 예시 원고 ──
-const SAMPLE_NAME = '예시 원고 - 강단노트 둘러보기.pdf';
-async function openSample() {
-  const have = (await idb.all('docs')).find(d => d.name === SAMPLE_NAME);
-  if (have) return openDoc(have.id);
-  busy('예시 원고를 준비하는 중…');
+// ── 사용 설명서(앱에 들어 있는 PDF) ──
+// 처음 설치하면 서재에 한 번 넣어 둔다. 설명서를 새로 고치면 GUIDE_VER 을 올린다(지운 사람에게 다시 억지로 넣지는 않음 — 판이 바뀔 때 한 번뿐)
+const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 2;
+async function addGuide(open) {
+  busy('사용 설명서를 준비하는 중…');
   try {
-    const blob = await fetch('sample/sample.pdf').then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); });
-    await importFiles([new File([blob], SAMPLE_NAME, { type: 'application/pdf' })]);
+    const blob = await fetch('sample/guide.pdf').then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); });
+    await importFiles([new File([blob], GUIDE_NAME, { type: 'application/pdf' })], { open });
   } catch (e) {
     console.error(e);
     busy();
-    toast('예시 원고를 불러오지 못했어요');
+    if (open) toast('사용 설명서를 불러오지 못했어요');
   }
+}
+async function openGuide() {
+  const have = (await idb.all('docs')).find(d => d.name === GUIDE_NAME);
+  if (have) return openDoc(have.id);
+  await addGuide(true);
+}
+async function seedGuide() {
+  if (readLS('pn.guideVer', 0) >= GUIDE_VER) return;
+  writeLS('pn.guideVer', GUIDE_VER);
+  if ((await idb.all('docs')).some(d => d.name === GUIDE_NAME)) return;
+  await addGuide(false);
 }
 
 // ── 첫 사용 안내(원고를 처음 열었을 때 한 번) ──
@@ -2065,7 +2131,7 @@ if (NATIVE) {
 }
 
 // ═══════════════════ 시작 ═══════════════════
-renderLibrary();
+renderLibrary().then(seedGuide);
 if (!NATIVE && 'serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
 }

@@ -170,7 +170,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .lasso{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible}
 .lasso polygon{fill:rgba(124,36,51,.06);stroke:var(--accent);stroke-width:1.6;stroke-dasharray:6 5;stroke-linejoin:round}
 .page canvas.float{pointer-events:none;will-change:transform}
-.selbox{position:absolute;z-index:2;border:1.5px dashed var(--accent);border-radius:8px;background:rgba(124,36,51,.05);pointer-events:none;will-change:transform}
+.selbox{position:absolute;z-index:2;border:1.5px dashed var(--accent);border-radius:8px;background:rgba(124,36,51,.05);pointer-events:none}
 .selbar{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);display:flex;align-items:center;gap:2px;
   padding:4px 4px 4px 12px;border-radius:12px;background:#2A241D;color:#F4EFE6;pointer-events:auto;white-space:nowrap;
   box-shadow:0 10px 24px -10px rgba(0,0,0,.55);font-size:13.5px}
@@ -193,27 +193,27 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .rbar .pill:active{background:rgba(0,0,0,.06)}
 .pstat .clock{color:var(--ink-2)}
 #reader[data-theme="dark"] .pstat .clock{color:#B8AFA2}
-/* 타이머: 상태마다 색 — 시작 전 버건디, 진행 초록 → 막바지 주황 → 넘김 빨강, 멈춤 회색 */
-.timer{gap:7px;padding:0 13px!important;--tc:var(--accent)}
+/* 타이머: 상태마다 색 — 대기 검정, 진행 버건디 → 막바지 주황 → 넘김 빨강, 멈춤 회색 */
+.timer{gap:7px;padding:0 13px!important;--tc:var(--ink)}
 .timer .tt{font-size:21px;font-weight:800;letter-spacing:.02em;color:var(--tc)}
 .timer small{font-size:12px;font-weight:600;color:var(--tc);opacity:.85}
 .timer .dot{width:9px;height:9px;border-radius:50%;background:var(--tc);opacity:.5}
 .timer.run .dot{opacity:1;animation:pulse 1.6s infinite}
-.timer.run{--tc:var(--ok)}.timer.warn{--tc:var(--warn)}.timer.over{--tc:var(--over)}.timer.paused{--tc:var(--ink-2)}
-#reader[data-theme="dark"] .timer{--tc:#E08A97}
-#reader[data-theme="dark"] .timer.run{--tc:#6BD49A}#reader[data-theme="dark"] .timer.warn{--tc:#F2B84B}
+.timer.run{--tc:var(--accent)}.timer.warn{--tc:var(--warn)}.timer.over{--tc:#D93025}.timer.paused{--tc:var(--ink-2)}
+#reader[data-theme="dark"] .timer{--tc:#F1EBE1}
+#reader[data-theme="dark"] .timer.run{--tc:#E8909E}#reader[data-theme="dark"] .timer.warn{--tc:#F2B84B}
 #reader[data-theme="dark"] .timer.over{--tc:#FF7A6E}#reader[data-theme="dark"] .timer.paused{--tc:#B8AFA2}
 @keyframes pulse{50%{opacity:.35}}
 .tset{font-size:14px!important;color:var(--ink-2);border:1px solid rgba(0,0,0,.12)}
 .tset svg.i{width:17px;height:17px}
 #reader[data-theme="dark"] .tset{border-color:rgba(255,255,255,.16);color:#B8AFA2}
-.tprog{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:var(--ok);transition:width .5s linear,background .4s}
-.tprog.warn{background:var(--warn)}.tprog.over{background:var(--over)}
+.tprog{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:var(--accent);transition:width .5s linear,background .4s}
+.tprog.warn{background:var(--warn)}.tprog.over{background:#D93025}
 .wake{color:var(--ok)}.wake.off{color:var(--ink-3)}
 /* 타이머 설정 창 */
 .tpop{padding:4px 8px 10px;width:330px;max-width:calc(100vw - 40px)}
 .tpop .dial{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 0 12px}
-.tpop .dial b{min-width:108px;text-align:center;font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent)}
+.tpop .dial b{min-width:108px;text-align:center;font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
 .tpop .dial b small{font-size:16px;font-weight:600;margin-left:2px}
 .tpop .dial button{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);font-size:15px;font-weight:700;background:#fff}
 .tpop .chips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
@@ -295,7 +295,14 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 /* 선택 상자 크기 손잡이 */
 .selhandle{position:absolute;right:-13px;bottom:-13px;width:26px;height:26px;border-radius:50%;background:#fff;border:2.5px solid var(--accent);
   box-shadow:0 2px 6px rgba(0,0,0,.25);pointer-events:auto;touch-action:none;cursor:nwse-resize}
-.selhandle::before{content:"";position:absolute;inset:-12px;border-radius:50%}
+.selhandle::before,.selrot::before{content:"";position:absolute;inset:-12px;border-radius:50%}
+.selrot{position:absolute;left:-15px;bottom:-15px;width:30px;height:30px;border-radius:50%;background:#fff;border:2.5px solid var(--accent);
+  display:grid;place-items:center;color:var(--accent);box-shadow:0 2px 6px rgba(0,0,0,.25);pointer-events:auto;touch-action:none;cursor:grab}
+.selrot svg.i{width:16px;height:16px;stroke-width:2.4}
+.selbox{transform-origin:center}
+.selbox.sel-active .selbar,.selbox.sel-active .selhandle,.selbox.sel-active .selrot{visibility:hidden}
+.selangle{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#2A241D;color:#fff;font-size:14px;font-weight:700;
+  padding:4px 10px;border-radius:9px;pointer-events:none;font-variant-numeric:tabular-nums}
 .selbar .cnt{font-size:13px}
 
 /* 서재: 여러 원고 고르기 */
@@ -416,6 +423,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2"/><path d="M9.5 2.5h5"/><path d="M12 2.5V6"/></symbol>
     <symbol id="i-side" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M9 4.5v15"/><path d="M5.5 8h1.5M5.5 11h1.5M5.5 14h1.5"/></symbol>
     <symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8M8 10.5h5M10.5 8v5"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-pages" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
@@ -458,7 +466,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <p>설교 원고 PDF를 불러오면 여기 쌓여요.<br>애플펜슬로 표시하고, 강단에서는 탭 한 번으로 넘겨 보세요.</p>
     <div class="empty-actions">
       <button class="btn primary" data-act="import"><svg class="i"><use href="#i-plus"/></svg>PDF 불러오기</button>
-      <button class="btn" data-act="sample"><svg class="i"><use href="#i-book"/></svg>예시 원고로 둘러보기</button>
+      <button class="btn" data-act="sample"><svg class="i"><use href="#i-book"/></svg>사용 설명서 보기</button>
     </div>
     <button class="linkbtn" data-act="howto">한글 · 워드 원고를 PDF로 만드는 법</button>
   </div>
@@ -482,8 +490,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <div class="rtitle prep-only"><b id="rTitle"></b><span id="rSub"></span></div>
     <div class="pstat pulpit-only">
       <button class="pill" id="pPage"><svg class="i"><use href="#i-pages"/></svg><span id="pPageTxt">1 / 1</span></button>
-      <span class="pill clock" id="pClock"></span>
       <span class="grow"></span>
+      <span class="pill clock" id="pClock"></span>
       <button class="pill timer" id="pTimer" aria-label="타이머 시작·멈춤"><span class="dot"></span><span class="tt" id="pTimerTxt">25:00</span><small id="pTimerSub">시작</small></button>
       <button class="pill tset" id="pTarget" aria-label="타이머 설정"><svg class="i"><use href="#i-timer"/></svg><span id="pTargetTxt">25분</span></button>
       <button class="pill" id="pTheme" aria-label="화면 밝기"><svg class="i"><use href="#i-moon"/></svg></button>

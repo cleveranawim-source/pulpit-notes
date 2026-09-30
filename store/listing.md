@@ -88,10 +88,10 @@
 ```
 No account or login is required.
 
-To try the app quickly, tap "예시 원고로 둘러보기" (View sample) on the empty library screen. It opens a 3-page sample manuscript that explains each feature.
+The library already contains a built-in user guide, "강단노트 사용 설명서" (6 pages). Open it to try every feature on a real document. It can be reopened any time from Settings (gear icon) → "사용 설명서 보기".
 
-- Prep mode (default): draw with Apple Pencil using pen, highlighter, eraser, and lasso (select) tools. Without a Pencil, turn on the hand button at the right end of the toolbar to draw with a finger.
-- Pulpit mode: tap "강단" at the top right. Tap the right side of the screen to go to the next screen and the left side to go back. The screen stays awake in this mode.
+- Prep mode (default): draw with Apple Pencil using pen, highlighter, eraser, and lasso (select) tools. A selection can be moved, resized (bottom-right handle) and rotated (bottom-left handle). Without a Pencil, turn on the hand button at the right end of the toolbar to draw with a finger. Pinch to zoom.
+- Pulpit mode: tap "강단" at the top right. Tap the right side of the screen to go to the next screen and the left side to go back. The screen stays awake in this mode. The sermon timer counts down from the minutes set with the timer button.
 - Import: "원고 불러오기" opens the document picker (PDF). A PDF can also be shared to the app from Files or other apps.
 - Settings (gear icon in the library): backup/restore, privacy policy, open-source licenses.
 

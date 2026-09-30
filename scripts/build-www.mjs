@@ -8,5 +8,5 @@ rmSync('www', { recursive: true, force: true });
 mkdirSync('www/sample', { recursive: true });
 for (const f of FILES) cpSync(f, `www/${f}`);
 for (const d of DIRS) cpSync(d, `www/${d}`, { recursive: true });
-cpSync('sample/sample.pdf', 'www/sample/sample.pdf');
+cpSync('sample/guide.pdf', 'www/sample/guide.pdf');
 console.log('www/ ready');
