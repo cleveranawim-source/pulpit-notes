@@ -680,6 +680,18 @@ const r2 = v => Math.round(v * 100) / 100;
 
 let live = null;           // 진행 중인 획·지우기·올가미·옮기기
 let penSeen = 0;
+let penLast = -1e9;        // 펜슬이 마지막으로 닿아 움직인 때(떠 있는 호버는 빼고)
+for (const t of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(t, e => {
+  if (e.pointerType === 'pen' && (t !== 'pointermove' || e.buttons)) penLast = performance.now();
+}, { capture: true, passive: true });
+// ── 손바닥 거르기(펜슬 쓰기 모드) ──
+// 손바닥은 닿는 면적이 크다(radius: 손가락 12~25, 손바닥 50~75). 또 펜슬로 쓰는 중이거나 막 뗀 뒤
+// 0.8초 안에 닿는 손은 손바닥으로 본다 — 원고가 밀리거나 확대 비율이 바뀌거나 쪽이 넘어가지 않게
+const PALM_R = 40, PEN_GRACE = 800;
+const palmGuard = () => !!R && !settings.finger;
+const penBusy = () => live?.pt === 'pen' || performance.now() - penLast < PEN_GRACE;
+const bigTouch = t => (t.radiusX || 0) > PALM_R || (t.radiusY || 0) > PALM_R;
+const palmIds = new Set(); // 손바닥으로 본 터치(뗄 때까지 확대·스크롤 계산에서 뺀다)
 const pan = { y: null };   // 손가락 쓰기 모드의 두 손가락 스크롤
 let tap = null;            // 강단 모드 탭 넘기기 / 손가락 탭으로 선택 해제
 
@@ -706,6 +718,7 @@ pagesEl.addEventListener('pointerdown', e => {
     toast('애플펜슬이 감지돼 손가락 쓰기를 껐어요. 손가락은 넘기기용이에요.', 3200);
   }
   if (e.pointerType === 'pen') penSeen = Date.now();
+  if (e.pointerType === 'touch' && palmGuard() && (penBusy() || e.width > PALM_R * 2 || e.height > PALM_R * 2)) return;
   if (live && live.pt === 'touch' && e.pointerType === 'touch') { cancelLive(); return; } // 두 번째 손가락 → 스크롤
   if (role === 'tap') { tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), st: scroller.scrollTop }; return; }
   const onSel = R.mode === 'prep' && inSelBox(e.clientX, e.clientY);
@@ -765,27 +778,50 @@ pagesEl.addEventListener('pointerleave', () => { if (!live) hideECur(); });
 const pinch = { st: null };
 const tDist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
 const tMid = t => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+const tStart = new Map(); // 터치별 닿은 때 — 확대는 두 손가락이 거의 함께 닿았을 때만
+const fingersOf = e => [...e.touches].filter(t => t.touchType !== 'stylus' && !palmIds.has(t.identifier));
+function cancelPinch() { // 펜슬이 닿으면 손바닥이 만든 확대·이동을 되돌린다
+  const st = pinch.st; pinch.st = null;
+  if (!st) return;
+  if (st.mode === 'pinch') zoomPreviewEnd();
+  if (st.mode === 'pan') { scroller.scrollTop = st.sy0; scroller.scrollLeft = st.sx0; }
+}
 scroller.addEventListener('touchstart', e => {
   if (e.target.closest?.('.selbar')) return;
+  const now = performance.now();
+  for (const t of e.changedTouches) tStart.set(t.identifier, now);
   const stylus = [...e.changedTouches].some(t => t.touchType === 'stylus');
-  if (R && e.touches.length === 2 && ![...e.touches].some(t => t.touchType === 'stylus')) {
+  if (stylus && pinch.st) cancelPinch();
+  if (!stylus && palmGuard()) {
+    const palm = [...e.changedTouches].filter(t => t.touchType !== 'stylus' && (penBusy() || bigTouch(t)));
+    if (palm.length) {
+      for (const t of palm) palmIds.add(t.identifier);
+      e.preventDefault(); tap = null;
+      if (pinch.st) cancelPinch();
+      return;
+    }
+  }
+  const fingers = fingersOf(e);
+  if (R && fingers.length === 2 && ![...e.touches].some(t => t.touchType === 'stylus') &&
+      !(palmGuard() && Math.abs(tStart.get(fingers[0].identifier) - tStart.get(fingers[1].identifier)) > 500)) {
     e.preventDefault();
     if (live?.pt === 'touch') cancelLive();
     tap = null;
-    const [mx, my] = tMid(e.touches);
-    pinch.st = { mode: 'wait', d0: tDist(e.touches), mx, my, fx: mx, fy: my, z0: settings.zoom || 1, z: settings.zoom || 1 };
+    const [mx, my] = tMid(fingers);
+    pinch.st = { mode: 'wait', d0: tDist(fingers), mx, my, fx: mx, fy: my, z0: settings.zoom || 1, z: settings.zoom || 1, sx0: scroller.scrollLeft, sy0: scroller.scrollTop };
     return;
   }
+  if (palmGuard() && palmIds.size && fingers.length >= 2) { e.preventDefault(); return; } // 손바닥이 얹힌 채 더한 손가락
   if (stylus && R?.pages.length) { e.preventDefault(); return; }
   if (live) { e.preventDefault(); return; }
   if (R?.mode === 'prep' && e.touches.length === 1 && inSelBox(e.touches[0].clientX, e.touches[0].clientY)) { e.preventDefault(); return; }
   if (settings.finger && R?.mode === 'prep' && e.touches.length === 1 && e.target.closest?.('.page')) e.preventDefault();
 }, { passive: false });
 scroller.addEventListener('touchmove', e => {
-  const st = pinch.st;
-  if (st && e.touches.length >= 2) {
+  const st = pinch.st, fingers = fingersOf(e);
+  if (st && fingers.length >= 2) {
     e.preventDefault();
-    const d = tDist(e.touches), [mx, my] = tMid(e.touches);
+    const d = tDist(fingers), [mx, my] = tMid(fingers);
     if (st.mode === 'wait') {
       if (Math.abs(d / st.d0 - 1) > 0.08) { st.mode = 'pinch'; zoomPreviewStart(st.fx, st.fy); }
       else if (Math.hypot(mx - st.mx, my - st.my) > 10) st.mode = 'pan';
@@ -794,11 +830,12 @@ scroller.addEventListener('touchmove', e => {
     else if (st.mode === 'pan') { scroller.scrollTop -= my - st.my; scroller.scrollLeft -= mx - st.mx; st.mx = mx; st.my = my; }
     return;
   }
-  if (live) e.preventDefault();
+  if (live || (palmGuard() && [...e.changedTouches].some(t => palmIds.has(t.identifier)))) e.preventDefault();
 }, { passive: false });
 const endPinch = e => {
+  for (const t of e.changedTouches) { palmIds.delete(t.identifier); tStart.delete(t.identifier); }
   const st = pinch.st;
-  if (!st || e.touches.length >= 2) return;
+  if (!st || fingersOf(e).length >= 2) return;
   pinch.st = null;
   if (st.mode === 'pinch') { zoomPreviewEnd(); setZoom(st.z, st.fx, st.fy); }
 };
@@ -984,14 +1021,22 @@ function straighten(S, P) {
   for (const p of pts) { const t = along(p); t0 = Math.min(t0, t); t1 = Math.max(t1, t); }
   const len = t1 - t0;
   if (len < w * 2) return;                                   // 너무 짧은 획
-  // 왕복 칠하기 · 동그라미: 그은 방향을 거슬러 되돌아간 거리가 크다
-  const dir = Math.sign(along(core[core.length - 1]) - along(core[0])) || 1;
-  let back = 0;
-  for (let k = 1; k < core.length; k++) back += Math.max(0, -dir * (along(core[k]) - along(core[k - 1])));
+  // 왕복 칠하기 · 동그라미: 그은 방향을 거슬러 크게 되돌아간 거리가 길다.
+  // 작은 되돌림은 세지 않는다 — 아이패드는 펜슬 점을 묶음으로 보내며 앞 점을 겹치거나 순서를 뒤바꿔
+  // 곧은 획도 톱니처럼 앞뒤로 오간다(점 사이 되돌림을 다 더하던 1.0.1(3)은 실기기에서 거의 늘 실패)
+  const dir = Math.sign(along(core[core.length - 1]) - along(core[0])) || 1, h = Math.max(w * 1.5, len * 0.05);
+  let ref = -Infinity, back = 0;
+  for (const p of core) {
+    const u = dir * along(p);
+    if (u > ref) ref = u;
+    else if (ref - u > h) { back += ref - u; ref = u; }
+  }
   if (back > len * 0.2 + w * 0.5) return;
-  // 흔들림: 가장 잘 맞는 직선에서 너무 멀리 벗어난 곳이 없어야
+  // 흔들림: 가장 잘 맞는 직선에서 너무 멀리 벗어난 곳이 없어야(튀는 점 몇 개는 봐준다)
   const tol = Math.max(w * 0.7, len * 0.03, P.w * 0.01);
-  for (const p of core) if (Math.abs(across(p)) > tol) return;
+  let out = 0;
+  for (const p of core) { const d = Math.abs(across(p)); if (d > tol * 1.6) return; if (d > tol) out++; }
+  if (out > core.length * 0.03) return;
   // 휜 정도: 가운데 부분에 포물선을 맞춰 전체 길이에서 얼마나 볼록한지 잰다
   let s1 = 0, s2 = 0, s3 = 0, s4 = 0, v0 = 0, v1 = 0, v2 = 0;
   for (const p of core) { const u = along(p), v = across(p), u2 = u * u; s1 += u; s2 += u2; s3 += u2 * u; s4 += u2 * u2; v0 += v; v1 += u * v; v2 += u2 * v; }
@@ -2001,7 +2046,7 @@ function openPrivacy() {
 
 // ── 사용 설명서(앱에 들어 있는 PDF) ──
 // 처음 설치하면 서재에 한 번 넣어 둔다. 설명서를 새로 고치면 GUIDE_VER 을 올린다(지운 사람에게 다시 억지로 넣지는 않음 — 판이 바뀔 때 한 번뿐)
-const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 3;
+const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 4;
 async function addGuide(open) {
   busy('사용 설명서를 준비하는 중…');
   try {
@@ -2188,8 +2233,9 @@ addEventListener('keydown', e => {
 });
 // 아이패드에서 화면 전체가 확대되는 것을 막는다(원고 크기는 여백 줄이기·가로 보기로)
 document.addEventListener('gesturestart', e => e.preventDefault());
-let gestZ = null;
-scroller.addEventListener('gesturestart', e => { if (!R || pinch.st) return; gestZ = { z0: settings.zoom || 1, z: settings.zoom || 1, fx: e.clientX, fy: e.clientY }; zoomPreviewStart(e.clientX, e.clientY); });
+let gestZ = null, touchCount = 0; // 손가락이 닿아 있으면 확대는 터치 쪽(손바닥 거르기)에서만 한다
+for (const t of ['touchstart', 'touchend', 'touchcancel']) document.addEventListener(t, e => { touchCount = e.touches.length; }, { capture: true, passive: true });
+scroller.addEventListener('gesturestart', e => { if (!R || pinch.st || touchCount) return; gestZ = { z0: settings.zoom || 1, z: settings.zoom || 1, fx: e.clientX, fy: e.clientY }; zoomPreviewStart(e.clientX, e.clientY); });
 scroller.addEventListener('gesturechange', e => { if (!gestZ) return; e.preventDefault(); gestZ.z = clamp(gestZ.z0 * e.scale, ZMIN, ZMAX); pagesEl.style.transform = `scale(${gestZ.z / gestZ.z0})`; });
 scroller.addEventListener('gestureend', () => { if (!gestZ) return; const g = gestZ; gestZ = null; zoomPreviewEnd(); setZoom(g.z, g.fx, g.fy); });
 
