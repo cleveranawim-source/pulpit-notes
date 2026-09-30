@@ -377,8 +377,41 @@ async function analyze(pdf, onPage) {
   return { crop, thumb };
 }
 
-$('#btnImport').onclick = () => fileInput.click();
-$('#empty [data-act=import]').onclick = () => fileInput.click();
+// 앱에서는 파일 앱 선택 창을 직접 띄워 마지막으로 고른 폴더에서 열리게 한다(ios/App/App/FolderPicker.swift).
+// 웹의 파일 입력 창은 시작 폴더를 정할 수 없어서, 웹판과 플러그인이 없을 때만 쓴다.
+async function pickFiles(kind) {
+  const P = plugin('FolderPicker');
+  const { files = [] } = await P.pick({ kind, multiple: kind === 'pdf' });
+  if (!files.length) return [];
+  busy(kind === 'zip' ? '백업 파일을 읽는 중…' : '원고를 읽는 중…');
+  const out = [];
+  try {
+    for (const f of files) {
+      try {
+        const blob = await fetch(Cap.convertFileSrc(f.path)).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+          .catch(async () => new Blob([base64ToBytes((await plugin('Filesystem').readFile({ path: f.path })).data)]));
+        out.push(new File([blob], (f.name || '원고.pdf').normalize('NFC'), { type: kind === 'zip' ? 'application/zip' : 'application/pdf' }));
+      } finally { plugin('Filesystem')?.deleteFile({ path: f.path }).catch(() => {}); }
+    }
+  } finally { busy(); }
+  return out;
+}
+async function startImport() {
+  if (!(NATIVE && plugin('FolderPicker'))) return fileInput.click();
+  try {
+    const files = await pickFiles('pdf');
+    if (files.length) await importFiles(files);
+  } catch (e) { console.error(e); busy(); toast('원고를 불러오지 못했어요', 2800); }
+}
+async function startRestore() {
+  if (!(NATIVE && plugin('FolderPicker'))) return $('#restoreFile').click();
+  try {
+    const [f] = await pickFiles('zip');
+    if (f) await restoreBackup(f);
+  } catch (e) { console.error(e); busy(); toast('백업 파일을 열지 못했어요', 2800); }
+}
+$('#btnImport').onclick = startImport;
+$('#empty [data-act=import]').onclick = startImport;
 $('#empty [data-act=sample]').onclick = () => openGuide();
 $('#empty [data-act=howto]').onclick = () => openPdfHowto();
 $('#btnSettings').onclick = () => openSettings();
@@ -1860,7 +1893,7 @@ function openSettings() {
       row('#i-help', '원고를 PDF로 만드는 법', '한글 · 워드 · Pages · 구글 문서', () => openPdfHowto()),
       h('div', 'sgroup-t', '백업'),
       row('#i-backup', '백업 만들기', last ? `마지막 백업 ${ago(last)}` : '아직 백업한 적이 없어요', () => { closeSheet(); makeBackup(); }),
-      row('#i-restore', '백업에서 복원', '새 기기로 옮기거나 되살릴 때', () => { closeSheet(); $('#restoreFile').click(); }),
+      row('#i-restore', '백업에서 복원', '새 기기로 옮기거나 되살릴 때', () => { closeSheet(); startRestore(); }),
       h('p', 'snote', '원고와 필기는 이 기기 안에만 저장돼요. 기기를 바꾸거나 앱을 지우기 전에 백업 파일을 iCloud Drive나 구글 드라이브에 보관해 두세요.'),
       h('div', 'sgroup-t', '정보'),
       row('#i-lock', '개인정보 처리방침', '모으는 정보가 없어요 — 모두 기기 안에', () => openPrivacy()),

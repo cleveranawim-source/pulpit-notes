@@ -67,6 +67,7 @@
 | 화면 꺼짐 방지 | Wake Lock API | `@capacitor-community/keep-awake` |
 | 내보내기·백업 저장 | Web Share / 다운로드 | Filesystem(임시 폴더) → `@capacitor/share` 공유 시트 |
 | 다른 앱에서 받기 | — | Info.plist `CFBundleDocumentTypes`(PDF·zip) → `appUrlOpen` → Filesystem.readFile |
+| 원고 불러오기 · 백업 복원 | `<input type=file>` | 자체 플러그인 `FolderPicker`(`ios/App/App/FolderPicker.swift`, `PulpitViewController` 에서 등록) — 원본 자리에서 열어 **마지막 폴더를 기억**(`directoryURL`, pdf·zip 따로 UserDefaults), 임시 폴더로 복사해 넘김 |
 | 오프라인 | 서비스워커 | 앱 안에 파일이 들어 있음(서비스워커 안 씀) |
 
 - 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.1(3) — 1.0.0(1)은 2026-09-27 심사 제출분 · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
