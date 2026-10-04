@@ -78,7 +78,7 @@
 | 원고 불러오기 · 백업 복원 | `<input type=file>` | 자체 플러그인 `FolderPicker`(`ios/App/App/FolderPicker.swift`, `PulpitViewController` 에서 등록) — 원본 자리에서 열어(asCopy:false) 조율된 읽기로 내려받고 임시 폴더로 복사해 넘김. **시작 폴더(`directoryURL`)는 일부러 주지 않는다**: 그래야 선택 창이 이 앱에서 마지막으로 보던 폴더를 스스로 기억해 연다(앱을 껐다 켜도). 구글 드라이브는 파일마다 보관 칸을 따로 두어 '파일이 든 폴더' 경로가 실제 폴더가 아니고, 파일 주소를 주면 '최근 항목'으로 열려서 1.0.1(4)에서 뺐다. 실기기 확인: 선택 창 자체 기억도 구글 드라이브 폴더는 되살리지 못한다(나의 iPad · iCloud 만) → 설명서 1·10장에 '파일 앱 즐겨찾기' 안내  내려받기는 비동기 `NSFileCoordinator`(1분 시간 제한 · `cancel()`), 받는 동안 `progress` 알림 → JS '파일을 받는 중…'+취소 버튼, 실패하면 `failed[{name, reason}]` → 셀룰러 설정 안내창(구글 드라이브 '와이파이에서만 전송'이면 셀룰러에서 영영 못 받아 아무 표시 없이 멈춰 있었다) |
 | 오프라인 | 서비스워커 | 앱 안에 파일이 들어 있음(서비스워커 안 씀) |
 
-- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.1(7) — 1.0.0(1)은 2026-09-27 심사 제출분 · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
+- 앱 ID `com.yeolstudio.pulpitnotes` · 이름 강단노트 · 팀 2GXUR7D82T · 버전 1.0.2(8) — 1.0.1 은 승인됨(2026-10-04 업로드 거절 메시지로 확인), 같은 버전 번호로는 더 올릴 수 없다 — 1.0.0(1)은 2026-09-27 심사 제출분 · `TARGETED_DEVICE_FAMILY = 2`(iPad 전용, 나중에 아이폰 추가는 가능·되돌리기는 불가).
 - 빌드: `npm run ios`(www/ 모으기 + cap sync) → Xcode에서 `ios/App/App.xcodeproj` 열기 → Product › Archive.
   시뮬레이터: `xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -derivedDataPath ios/DerivedData build CODE_SIGNING_ALLOWED=NO`.
 - JS 콘솔 보기: `xcrun simctl launch --console-pty <기기> com.yeolstudio.pulpitnotes` (⚡️ 로그).
