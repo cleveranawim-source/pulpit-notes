@@ -2209,7 +2209,7 @@ function openPrivacy() {
 
 // ── 사용 설명서(앱에 들어 있는 PDF) ──
 // 처음 설치하면 서재에 한 번 넣어 둔다. 설명서를 새로 고치면 GUIDE_VER 을 올린다(지운 사람에게 다시 억지로 넣지는 않음 — 판이 바뀔 때 한 번뿐)
-const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 5;
+const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 6;
 // 판 번호를 붙여 받는다 — 웹판이 새 버전으로 바뀌는 첫 실행은 옛 서비스워커가 맡아 옛 설명서를 캐시에서 주었다
 const guideBlob = () => fetch(`sample/guide.pdf?v=${GUIDE_VER}`).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); });
 async function addGuide(open) {
