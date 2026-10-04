@@ -1971,6 +1971,22 @@ function autoNudge(dir) {
   scroller.scrollTo({ top: clamp(scroller.scrollTop + dir * H / 5, 0, max), behavior: 'smooth' });
   if (A.running) autoSchedule();
 }
+// ⏱ 시간에 맞추기: 지금 자리에서 원고 끝까지 남은 분량을, 타이머의 남은 시간(시작 전이면 정한 시간 전체,
+// 스톱워치면 '알려 줄 시간'까지) 안에 끝내는 속도로. 멈춰 있었다면 흐르기 시작한다
+function autoFit() {
+  if (!R) return;
+  const left = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
+  const remain = settings.target * 60000 - elapsed();
+  if (left <= 1) { toast('원고의 끝이에요', 1600); return; }
+  if (remain <= 0) { toast('남은 설교 시간이 없어요', 2200); return; }
+  const s = 9 + Math.log(left / (remain / 1000) / (AUTO_K * pageW())) / Math.log(AUTO_R);
+  autoSetSpeed(s);
+  if (s < 1) toast('가장 느린 속도로 맞췄어요 · 속도 1', 2400);
+  else if (s > 20) toast('가장 빠른 속도로 맞췄어요 · 속도 20', 2400);
+  else toast(`${Math.max(1, Math.round(remain / 60000))}분 안에 끝나도록 맞췄어요 · 속도 ${fmtSpeed(A.speed)}`, 2600);
+  if (!A.running) autoPlay();
+}
+$('#aFit').onclick = () => autoFit();
 // 흐르는 중 손가락으로 끌면 그동안은 쉬고, 뗀 자리부터 다시 흐른다(손바닥·펜슬은 빼고)
 scroller.addEventListener('touchstart', e => {
   if (A.on && [...e.changedTouches].some(t => t.touchType !== 'stylus' && !palmIds.has(t.identifier))) { A.touching = true; A.lastSet = null; }
