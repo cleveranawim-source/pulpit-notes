@@ -390,7 +390,7 @@ document.addEventListener('visibilitychange', () => {
 - [ ] **Step 7: 시험 통과 확인**
 
 Run: `cd $SH && node srv.mjs node tauto.mjs`
-Expected: `통과 18 · 실패 0 · 오류 []`
+Expected: `통과 17 · 실패 0 · 오류 []`
 - 속도 9의 `wakesPerSec`는 약 9(헤드리스 DPR 2, 소수 스크롤 가능)다.
 - 소수 스크롤이 안 되는 환경이면 약 4.5다. 둘 다 2~31 안이다.
 
