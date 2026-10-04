@@ -754,11 +754,11 @@ pagesEl.addEventListener('pointerdown', e => {
   }
   if (e.pointerType === 'pen') penSeen = Date.now();
   if (live && live.pt === 'touch' && e.pointerType === 'touch') { cancelLive(); return; } // 두 번째 손가락 → 스크롤
-  if (role === 'tap') { tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), st: scroller.scrollTop }; return; }
+  if (role === 'tap') { tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), st: scroller.scrollTop, am: A.moved }; return; }
   const onSel = R.mode === 'prep' && inSelBox(e.clientX, e.clientY);
   const touchMove = onSel && e.pointerType === 'touch'; // 고른 필기는 손가락으로도 옮길 수 있다
   if (role !== 'draw' && !touchMove) {
-    if (R.sel && e.pointerType === 'touch') tap = { kind: 'desel', id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), st: scroller.scrollTop };
+    if (R.sel && e.pointerType === 'touch') tap = { kind: 'desel', id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), st: scroller.scrollTop, am: A.moved };
     return;
   }
   if (live) return;
@@ -792,10 +792,12 @@ pagesEl.addEventListener('pointermove', e => {
 pagesEl.addEventListener('pointerup', e => {
   if (tap && e.pointerId === tap.id) {
     const t = tap; tap = null;
-    if (Math.hypot(e.clientX - t.x, e.clientY - t.y) < 12 && performance.now() - t.t < 450 && Math.abs(scroller.scrollTop - t.st) < 4) {
+    // 자동 스크롤이 민 만큼은 '손으로 움직임'에서 뺀다(빠르게 흐를 때도 탭으로 인정)
+    if (Math.hypot(e.clientX - t.x, e.clientY - t.y) < 12 && performance.now() - t.t < 450 && Math.abs(scroller.scrollTop - t.st - (A.moved - t.am)) < 4) {
       if (t.kind === 'desel') { clearSel(); return; }
-      const r = scroller.getBoundingClientRect();
-      turn((e.clientX - r.left) / r.width < 0.3 ? -1 : 1);
+      const r = scroller.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width;
+      if (A.on) { if (fx < 0.25) autoNudge(-1); else if (fx > 0.75) autoNudge(1); else autoToggle(); } // 자동 스크롤: 가운데 멈춤↔흐름, 양 끝 조금씩
+      else turn(fx < 0.3 ? -1 : 1);
       if (!wakeLock) requestWake();
     }
     return;
@@ -1759,6 +1761,7 @@ $('#pTheme').onclick = () => {
 // 한 화면씩 넘기기 — 앞 화면의 마지막 몇 줄을 남겨 두고, 이어 읽을 자리에 금색 표시
 function turn(dir) {
   if (!R) return;
+  if (A.on) { A.holdUntil = performance.now() + 700; A.lastSet = null; } // 부드럽게 넘기는 동안 자동 이동이 끼어들지 않게
   const H = scroller.clientHeight, overlap = Math.max(56, H * 0.14);
   const cur = scroller.scrollTop, max = scroller.scrollHeight - H;
   const target = clamp(cur + dir * (H - overlap), 0, max);
@@ -1962,6 +1965,19 @@ $('#aSlow').onclick = () => autoSetSpeed(Number.isInteger(A.speed) ? A.speed - 1
 $('#aFast').onclick = () => autoSetSpeed(Number.isInteger(A.speed) ? A.speed + 1 : Math.ceil(A.speed));
 $('#aOff').onclick = () => autoOff();
 autoPanel.addEventListener('pointerdown', () => autoPanelShow(true)); // 조절판을 만지는 동안은 접지 않는다
+function autoNudge(dir) {
+  const H = scroller.clientHeight, max = scroller.scrollHeight - H;
+  A.holdUntil = performance.now() + 450; A.lastSet = null;
+  scroller.scrollTo({ top: clamp(scroller.scrollTop + dir * H / 5, 0, max), behavior: 'smooth' });
+  if (A.running) autoSchedule();
+}
+// 흐르는 중 손가락으로 끌면 그동안은 쉬고, 뗀 자리부터 다시 흐른다(손바닥·펜슬은 빼고)
+scroller.addEventListener('touchstart', e => {
+  if (A.on && [...e.changedTouches].some(t => t.touchType !== 'stylus' && !palmIds.has(t.identifier))) { A.touching = true; A.lastSet = null; }
+}, { passive: true });
+for (const ev of ['touchend', 'touchcancel']) scroller.addEventListener(ev, e => {
+  if (A.touching && !e.touches.length) { A.touching = false; A.holdUntil = performance.now() + 350; }
+}, { passive: true });
 renderAuto();
 document.addEventListener('visibilitychange', () => {
   if (A.running) { A.last = performance.now(); A.lastSet = null; if (document.visibilityState === 'visible') autoSchedule(); }
