@@ -1733,7 +1733,7 @@ function setMode(mode, keep = true) {
   applyTheme();
   closeMenu();
   if (mode === 'pulpit') { requestWake(); startTick(); }
-  else { releaseWake(); stopTick(); }
+  else { releaseWake(); stopTick(); autoOff(); }
   if (a) requestAnimationFrame(() => { if (!R) return; for (const P of R.pages) P.top = P.el.offsetTop; const A = R.pages[a.i]; scroller.scrollTop = A.top + a.f * A.dh; });
 }
 $$('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
@@ -1813,7 +1813,7 @@ function tick() {
   // 15분 동안 손대지 않으면 꺼짐 방지를 푼다(화면을 톡 치면 다시 켜진다)
   // (아직 시작하지 않았으면 예배 앞부분 내내 기다릴 수 있어 90분)
   const quiet = Date.now() - lastTouch, stale = idle ? quiet > 90 * 60e3 : (!T.running || e > tgt + 30 * 60e3) && quiet > 15 * 60e3;
-  if (wakeLock && stale) releaseWake();
+  if (wakeLock && stale && !A.running) releaseWake(); // 자동 스크롤이 흐르는 동안은 손대지 않아도 켜 둔다
 }
 function toggleTimer() {
   if (T.running) { T.acc += Date.now() - T.start; T.running = false; }
@@ -1878,7 +1878,93 @@ function updateWake() {
   w.title = wakeLock ? '화면이 꺼지지 않아요' : '화면 꺼짐 방지가 꺼져 있어요 (설정 › 디스플레이 › 자동 잠금 확인)';
 }
 $('#pWake').onclick = () => wakeLock ? toast('화면이 꺼지지 않게 잡아 두었어요', 1600) : (requestWake(), toast('화면 꺼짐 방지를 다시 켰어요. 안 되면 설정 › 디스플레이 › 자동 잠금을 ‘안 함’으로 두세요.', 3600));
+// ── 자동 스크롤(강단) ──
+// 원고를 화면 점 하나(아이패드 0.5px)씩, 필요한 만큼만 깨어 민다(1초 최대 30번, 멈춤이면 0번).
+// 빠르기는 쪽 표시 폭에 비례 — 가로로 돌리거나 확대해도 글자 기준 빠르기가 같다. 속도 9 ≈ A4 한 쪽 4~5분.
+// 설계: docs/superpowers/specs/2026-10-04-autoscroll-design.md
+const AUTO_K = 0.0045, AUTO_R = 1.17;
+const A = { on: false, running: false, speed: clamp(+settings.autoSpeed || 9, 1, 20), pos: 0, last: 0, lastSet: null, quantum: 1, timer: 0, hideT: 0, holdUntil: 0, touching: false, moved: 0, wait: 33 };
+const autoBox = $('#autoBox'), autoPanel = $('#autoPanel');
+const pageW = () => R?.pages[curPage()]?.dw || scroller.clientWidth;
+const autoVel = () => AUTO_K * pageW() * AUTO_R ** (A.speed - 9); // CSS px/초
+const fmtSpeed = s => String(Math.round(s * 10) / 10);
+function renderAuto() {
+  autoBox.classList.toggle('on', A.on);
+  autoBox.classList.toggle('run', A.running);
+  const p = $('#aPlay');
+  p.innerHTML = `<svg class="i"><use href="#i-${A.running ? 'pause' : 'play'}"/></svg>`;
+  p.setAttribute('aria-label', A.running ? '멈춤' : '흐르기');
+  $('#aSpd').textContent = `속도 ${fmtSpeed(A.speed)}`;
+}
+function autoPanelShow(on) {
+  clearTimeout(A.hideT);
+  autoPanel.hidden = !on;
+  if (on) A.hideT = setTimeout(() => { autoPanel.hidden = true; }, 5000); // 5초 손대지 않으면 접는다(원고는 계속 흐름)
+}
+function autoSchedule() {
+  clearTimeout(A.timer);
+  A.wait = A.touching || performance.now() < A.holdUntil ? 200 : Math.max(33, 1000 * A.quantum / autoVel());
+  A.timer = setTimeout(autoStep, A.wait);
+}
+function autoStep() {
+  A.timer = 0;
+  if (!R || !A.running) return;
+  const now = performance.now();
+  if (A.touching || now < A.holdUntil) { A.last = now; A.lastSet = null; return autoSchedule(); } // 손가락·넘기기 동안은 쉬고, 끝나면 그 자리부터
+  const cur = scroller.scrollTop, max = scroller.scrollHeight - scroller.clientHeight;
+  if (A.lastSet == null || Math.abs(cur - A.lastSet) > 1.5) A.pos = cur; // 누가 움직였으면(페달·탭·확대) 그 자리부터
+  const dt = Math.min(Math.max(250, 2 * A.wait), now - A.last) / 1000; // 늦게 깬 만큼은 따라가되, 오래 쉰 뒤(화면 꺼짐 등)에 한꺼번에 뛰지 않게
+  A.last = now;
+  const before = A.pos;
+  A.pos = Math.min(max, A.pos + autoVel() * dt);
+  A.moved += A.pos - before;
+  scroller.scrollTop = A.pos;
+  A.lastSet = scroller.scrollTop;
+  if (A.pos >= max - 0.5) { autoPause(); toast('원고의 끝이에요', 1600); return; }
+  autoSchedule();
+}
+function autoPlay() {
+  if (!R) return;
+  if (scroller.scrollTop >= scroller.scrollHeight - scroller.clientHeight - 0.5) { toast('원고의 끝이에요', 1600); return; }
+  A.running = true; A.last = performance.now(); A.lastSet = null;
+  renderAuto(); autoSchedule();
+}
+function autoPause() { A.running = false; clearTimeout(A.timer); A.timer = 0; renderAuto(); }
+function autoToggle() { A.running ? autoPause() : autoPlay(); }
+function autoOn() {
+  if (!R || R.mode !== 'pulpit') return;
+  if (!A.on) {
+    const t0 = scroller.scrollTop; // 소수 스크롤이 되면 기기 화소 하나씩, 아니면 1px씩
+    scroller.scrollTop = t0 + 0.5;
+    A.quantum = Math.abs(scroller.scrollTop - t0 - 0.5) < 0.02 ? 1 / (devicePixelRatio || 1) : 1;
+    scroller.scrollTop = t0;
+    A.on = true;
+    autoPlay();
+  }
+  autoPanelShow(true);
+  renderAuto();
+}
+function autoOff() {
+  autoPause();
+  A.on = false; A.touching = false;
+  autoPanelShow(false);
+  renderAuto();
+}
+function autoSetSpeed(s) {
+  A.speed = clamp(Math.round(s * 10) / 10, 1, 20);
+  settings.autoSpeed = A.speed; saveSettings();
+  renderAuto();
+  if (A.running) autoSchedule();
+}
+$('#autoBtn').onclick = () => autoOn();
+$('#aPlay').onclick = () => autoToggle();
+$('#aSlow').onclick = () => autoSetSpeed(Number.isInteger(A.speed) ? A.speed - 1 : Math.floor(A.speed));
+$('#aFast').onclick = () => autoSetSpeed(Number.isInteger(A.speed) ? A.speed + 1 : Math.ceil(A.speed));
+$('#aOff').onclick = () => autoOff();
+autoPanel.addEventListener('pointerdown', () => autoPanelShow(true)); // 조절판을 만지는 동안은 접지 않는다
+renderAuto();
 document.addEventListener('visibilitychange', () => {
+  if (A.running) { A.last = performance.now(); A.lastSet = null; if (document.visibilityState === 'visible') autoSchedule(); }
   if (document.visibilityState !== 'visible' || R?.mode !== 'pulpit') return;
   if (!NATIVE) wakeLock = null; // 웹의 잠금은 화면을 벗어나면 풀린다
   requestWake();

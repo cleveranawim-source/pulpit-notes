@@ -239,7 +239,8 @@ const s2 = await t.st(), w1 = await t.wakes();
 t.log('멈춤 버튼 → 멈춤 · 이동 0 · 깨움 거의 0', !s2.run && s2.on && Math.abs(s2.top - top0) < 0.5 && w1 - w0 <= 1, { moved: s2.top - top0, wakes: w1 - w0 });
 for (let i = 0; i < 25; i++) await t.click('#aFast'); // 속도 20으로 끝까지
 const max = await t.maxTop(); await t.setTop(max - 40); await sleep(200);
-await t.click('#aPlay'); await sleep(3500);
+await t.click('#aPlay');
+for (let i = 0; i < 50 && (await t.st()).run; i++) await sleep(100); // 멈추는 순간을 기다려 알림까지 확인
 s = await t.st(); t.log('원고 끝 → 스스로 멈춤 · 알림', !s.run && s.on && s.toast.includes('원고의 끝'), s);
 await t.click('#aOff'); await sleep(200);
 s = await t.st(); t.log('끄기 → 꺼짐 · 조절판 닫힘', !s.on && !s.run && !s.panel, s);
@@ -273,7 +274,7 @@ document.addEventListener('visibilitychange', () => {
 // 빠르기는 쪽 표시 폭에 비례 — 가로로 돌리거나 확대해도 글자 기준 빠르기가 같다. 속도 9 ≈ A4 한 쪽 4~5분.
 // 설계: docs/superpowers/specs/2026-10-04-autoscroll-design.md
 const AUTO_K = 0.0045, AUTO_R = 1.17;
-const A = { on: false, running: false, speed: clamp(+settings.autoSpeed || 9, 1, 20), pos: 0, last: 0, lastSet: null, quantum: 1, timer: 0, hideT: 0, holdUntil: 0, touching: false, moved: 0 };
+const A = { on: false, running: false, speed: clamp(+settings.autoSpeed || 9, 1, 20), pos: 0, last: 0, lastSet: null, quantum: 1, timer: 0, hideT: 0, holdUntil: 0, touching: false, moved: 0, wait: 33 };
 const autoBox = $('#autoBox'), autoPanel = $('#autoPanel');
 const pageW = () => R?.pages[curPage()]?.dw || scroller.clientWidth;
 const autoVel = () => AUTO_K * pageW() * AUTO_R ** (A.speed - 9); // CSS px/초
@@ -293,8 +294,8 @@ function autoPanelShow(on) {
 }
 function autoSchedule() {
   clearTimeout(A.timer);
-  const wait = A.touching || performance.now() < A.holdUntil ? 200 : Math.max(33, 1000 * A.quantum / autoVel());
-  A.timer = setTimeout(autoStep, wait);
+  A.wait = A.touching || performance.now() < A.holdUntil ? 200 : Math.max(33, 1000 * A.quantum / autoVel());
+  A.timer = setTimeout(autoStep, A.wait);
 }
 function autoStep() {
   A.timer = 0;
@@ -303,7 +304,7 @@ function autoStep() {
   if (A.touching || now < A.holdUntil) { A.last = now; A.lastSet = null; return autoSchedule(); } // 손가락·넘기기 동안은 쉬고, 끝나면 그 자리부터
   const cur = scroller.scrollTop, max = scroller.scrollHeight - scroller.clientHeight;
   if (A.lastSet == null || Math.abs(cur - A.lastSet) > 1.5) A.pos = cur; // 누가 움직였으면(페달·탭·확대) 그 자리부터
-  const dt = Math.min(250, now - A.last) / 1000; // 화면이 꺼졌다 켜지는 등 오래 쉰 뒤에도 한꺼번에 뛰지 않게
+  const dt = Math.min(Math.max(250, 2 * A.wait), now - A.last) / 1000; // 늦게 깬 만큼은 따라가되, 오래 쉰 뒤(화면 꺼짐 등)에 한꺼번에 뛰지 않게
   A.last = now;
   const before = A.pos;
   A.pos = Math.min(max, A.pos + autoVel() * dt);
