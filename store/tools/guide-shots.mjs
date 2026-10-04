@@ -165,8 +165,8 @@ await page.keyboard.press('ArrowRight'); await sleep(750);
 await full('pulpit');
 await blank(true);
 await clip('bar-pulpit', ['#rbar'], { pad: 0, b: 44, marks: [
-  { sel: '#btnBack', n: 1 }, { sel: '#pPage', n: 2 }, { sel: '#pClock', n: 3 }, { sel: '#pTimer', n: 4 }, { sel: '#pTarget', n: 5 },
-  { sel: '#pTheme', n: 6 }, { sel: '#pWake', n: 7 }, { sel: '#modeSeg', n: 8 }, { sel: '#btnMenu', n: 9 }] });
+  { sel: '#btnBack', n: 1 }, { sel: '#pPage', n: 2 }, { sel: '#pClock', n: 3 }, { sel: '#pTimer', n: 4 }, { sel: '#pTarget', n: 5 }, { sel: '#autoBtn', n: 6 },
+  { sel: '#pTheme', n: 7 }, { sel: '#pWake', n: 8 }, { sel: '#modeSeg', n: 9 }, { sel: '#btnMenu', n: 10 }] });
 await page.click('#pTarget'); await sleep(300);
 await clip('timer', ['.menu', '#pTimer', '#pTarget'], { pad: 12, l: 46, r: 10, marks: [
   { sel: '.tpop .tmode', n: 1, at: 'left' }, { sel: '.tpop .dial', n: 2, at: 'left' }, { sel: '.tpop .chips', n: 3, at: 'left' },
