@@ -21,7 +21,7 @@
   --paper:#F4EFE6; --paper-2:#EBE4D6; --card:#FBF8F2;
   --ink:#2A241D; --ink-2:#6E6356; --ink-3:#A0968A; --line:#DCD2C1;
   --accent:#7C2433; --accent-soft:#F1E1E0; --gold:#B0843A;
-  --desk:#E4DED3; --bar:rgba(247,243,236,.86);
+  --desk:#E4DED3; --bar:rgba(247,243,236,.86); --bar-solid:#F7F3EC;
   --ok:#3F7D58; --warn:#C98A1B; --over:#B3261E;
   --serif:"Gowun Batang","AppleMyungjo","Nanum Myeongjo",serif;
   --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
@@ -74,7 +74,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card .sub{font-size:12.5px;color:var(--ink-3);margin-top:-6px}
 .card .more{position:absolute;top:6px;right:6px;z-index:2;width:36px;height:36px;border-radius:10px;
-  display:grid;place-items:center;background:rgba(251,248,242,.9);color:var(--ink-2);backdrop-filter:blur(6px)}
+  display:grid;place-items:center;background:rgba(251,248,242,.94);color:var(--ink-2)}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .empty{max-width:560px;margin:8vh auto 0;text-align:center;color:var(--ink-2)}
 .empty .art{width:120px;height:120px;margin:0 auto 18px;opacity:.9}
@@ -90,7 +90,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 #reader{background:var(--desk)}
 .rbar{flex:none;display:flex;align-items:center;gap:10px;z-index:5;
   padding:calc(8px + var(--safe-t)) calc(12px + var(--safe-r)) 8px calc(12px + var(--safe-l));
-  background:var(--bar);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);
+  background:var(--bar); /* 흐림(backdrop-filter)은 뺐다 — 뒤로 지나가는 것이 없어 보이는 차이 없이 그래픽 일만 늘렸다 */
   border-bottom:1px solid rgba(0,0,0,.06)}
 .icon-btn{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:var(--ink);flex:none}
 .icon-btn:active{background:rgba(0,0,0,.06)}
@@ -121,7 +121,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 /* 화면 테마 */
 #reader[data-theme="sepia"]{--desk:#D8CCB4}
 #reader[data-theme="sepia"] .page{filter:sepia(.32) brightness(.98)}
-#reader[data-theme="dark"]{--desk:#121110;--bar:rgba(28,26,24,.88)}
+#reader[data-theme="dark"]{--desk:#121110;--bar:rgba(28,26,24,.88);--bar-solid:#1C1A18}
 #reader[data-theme="dark"] .page{filter:invert(.9) hue-rotate(180deg);box-shadow:none}
 #reader[data-theme="dark"] .rbar{color:#E9E3D8;border-color:rgba(255,255,255,.06)}
 #reader[data-theme="dark"] .icon-btn,#reader[data-theme="dark"] .rtitle span{color:#CFC7BA}
@@ -131,8 +131,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 
 /* 도구 팔레트 */
 .palette{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + var(--safe-b));z-index:6;
-  display:flex;align-items:center;gap:4px;padding:6px;border-radius:18px;background:var(--bar);
-  backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);
+  display:flex;align-items:center;gap:4px;padding:6px;border-radius:18px;background:var(--bar-solid); /* 흐림 없이 불투명 — 필기·스크롤 매 장면 다시 흐리던 일 덜기 */
   box-shadow:0 14px 34px -14px rgba(40,30,20,.5),0 0 0 1px rgba(0,0,0,.05);max-width:calc(100% - 20px)}
 .palette .sep{width:1px;height:28px;background:rgba(0,0,0,.1);margin:0 4px}
 .tool{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;color:var(--ink-2);position:relative}
@@ -263,6 +262,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .busy{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(244,239,230,.7);backdrop-filter:blur(3px)}
 .busy div{background:#FBF8F2;padding:18px 24px;border-radius:16px;box-shadow:0 20px 40px -20px rgba(0,0,0,.4);
   display:flex;gap:12px;align-items:center;font-size:15px;max-width:80vw}
+.busy .btn{height:34px;padding:0 14px;font-size:14px;margin-left:6px;flex:none}
 .spin{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -392,6 +392,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 }
 @media (max-width:480px){ .palette .size,.palette .sep.s2,.opts .hint{display:none} }
 @media (max-width:760px){ .opts .hint{display:none} }
+/* 강단 막대: 아이패드 미니 세로(744)에서도 서재 버튼까지 한 줄에 */
+@media (max-width:800px){ #reader[data-mode="pulpit"] .rbar{gap:6px} #reader[data-mode="pulpit"] .rbar .pill{padding:0 8px} #reader[data-mode="pulpit"] .seg svg.i{display:none} #reader[data-mode="pulpit"] .seg button{padding:0 12px} }
 </style>
 </head>
 <body>
@@ -492,7 +494,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 <!-- 리더 -->
 <section id="reader" class="view" data-mode="prep" data-theme="light" hidden>
   <header class="rbar" id="rbar">
-    <button class="icon-btn prep-only" id="btnBack" aria-label="서재로"><svg class="i"><use href="#i-back"/></svg></button>
+    <button class="icon-btn" id="btnBack" aria-label="서재로"><svg class="i"><use href="#i-back"/></svg></button>
     <button class="icon-btn prep-only" id="btnThumbs" aria-label="쪽 미리보기"><svg class="i"><use href="#i-side"/></svg></button>
     <div class="rtitle prep-only"><b id="rTitle"></b><span id="rSub"></span></div>
     <div class="pstat pulpit-only">

@@ -80,13 +80,14 @@ function toast(msg, ms = 2400) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.remove(), ms);
 }
-function busy(msg) {
+function busy(msg, onCancel) {
   $('.busy')?.remove();
   if (!msg) return;
   const b = document.createElement('div');
   b.className = 'busy';
-  b.innerHTML = '<div><span class="spin"></span><span></span></div>';
-  b.querySelector('span:last-child').textContent = msg;
+  b.innerHTML = '<div><span class="spin"></span><span class="msg"></span></div>';
+  b.querySelector('.msg').textContent = msg;
+  if (onCancel) b.firstChild.append(Object.assign(document.createElement('button'), { className: 'btn', textContent: '취소', onclick: onCancel }));
   document.body.append(b);
 }
 // buttons: [{label, cls, value, onClick}] — onClick 은 탭 이벤트 안에서 바로 실행된다(공유 시트용)
@@ -381,7 +382,27 @@ async function analyze(pdf, onPage) {
 // 웹의 파일 입력 창은 시작 폴더를 정할 수 없어서, 웹판과 플러그인이 없을 때만 쓴다.
 async function pickFiles(kind) {
   const P = plugin('FolderPicker');
-  const { files = [] } = await P.pick({ kind, multiple: kind === 'pdf' });
+  // 고른 파일이 클라우드에만 있으면 앱이 내려받는다 — 받는 동안 표시하고 취소할 수 있게(1분 지나면 앱이 멈춤)
+  let showT = 0, slowT = 0;
+  const sub = await P.addListener?.('progress', e => {
+    clearTimeout(showT); clearTimeout(slowT);
+    const label = `파일을 받는 중… ${e.total > 1 ? `(${e.index}/${e.total}) ` : ''}${e.name.normalize('NFC')}`;
+    const show = extra => busy(label + (extra || ''), () => P.cancel());
+    showT = setTimeout(show, 400); // 이 아이패드에 있는 파일은 바로 끝나 깜빡이지 않게
+    slowT = setTimeout(() => show(' — 오래 걸리면 인터넷 연결을 확인해 주세요'), 12000);
+  });
+  let res;
+  try { res = await P.pick({ kind, multiple: kind === 'pdf' }); }
+  finally { clearTimeout(showT); clearTimeout(slowT); sub?.remove?.(); busy(); }
+  const { files = [], failed = [] } = res || {};
+  const lost = failed.filter(f => f.reason !== 'cancel');
+  if (lost.length) await dialog({
+    title: '파일을 받지 못했어요',
+    body: `「${lost.map(f => f.name.normalize('NFC')).join('」, 「')}」를 클라우드에서 받지 못했어요. ` +
+      '셀룰러(데이터)로 연결돼 있다면 ① 구글 드라이브 앱 › 설정 › 데이터 사용량에서 ‘Wi-Fi를 통해서만 파일 전송’을 끄고 ' +
+      '② 아이패드 설정 › 셀룰러에서 Google Drive를 켜 주세요. 와이파이에서는 다시 시도하면 대개 받아져요.',
+    buttons: [{ label: '확인', cls: 'primary', value: true }],
+  });
   if (!files.length) return [];
   busy(kind === 'zip' ? '백업 파일을 읽는 중…' : '원고를 읽는 중…');
   const out = [];
@@ -1631,11 +1652,6 @@ function menuItem(icon, label, fn, cls = '', right) {
   return b;
 }
 $('#btnMenu').onclick = e => openMenu(e.currentTarget, m => {
-  // 강단 화면에는 위쪽 막대에 서재 버튼을 두지 않는다(설교 중 잘못 눌러 원고가 닫히지 않게) — 메뉴 안에서만
-  if (R.mode === 'pulpit') {
-    m.append(menuItem('#i-back', '서재로 돌아가기', closeDoc));
-    m.append(document.createElement('hr'));
-  }
   m.append(Object.assign(document.createElement('div'), { className: 'lbl', textContent: '화면' }));
   const th = document.createElement('div');
   th.className = 'themes';
@@ -1762,11 +1778,17 @@ let tickTimer = 0;
 const saveTimerState = () => writeLS('pn.timer', { start: T.start, acc: T.acc, running: T.running });
 const elapsed = () => T.acc + (T.running ? Date.now() - T.start : 0);
 const mmss = ms => { const s = Math.floor(Math.max(0, ms) / 1000); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
-function startTick() { stopTick(); tick(); tickTimer = setInterval(tick, 500); }
+function startTick() { stopTick(); tickLoop(); }
+// 0.5초마다 깨우지 않고, 표시할 숫자가 바뀌는 때에 맞춰 한 번씩(멈춰 있으면 시계가 바뀌는 분마다) 깨운다
+function tickLoop() {
+  tick();
+  const wait = T.running ? 1000 - (elapsed() % 1000) : 60000 - (Date.now() % 60000);
+  tickTimer = setTimeout(tickLoop, wait + 15);
+}
 // 0.5초마다 부르지만 글자·색·막대가 실제로 바뀔 때만 건드린다(가만히 있는 화면을 다시 그리지 않게)
 const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
 const setClass = (el, v) => { if (el.className !== v) el.className = v; };
-function stopTick() { clearInterval(tickTimer); tickTimer = 0; }
+function stopTick() { clearTimeout(tickTimer); tickTimer = 0; }
 function tick() {
   const now = new Date();
   setText($('#pClock'), `${now.getHours() < 12 ? '오전' : '오후'} ${(now.getHours() % 12) || 12}:${String(now.getMinutes()).padStart(2, '0')}`);
@@ -1789,9 +1811,9 @@ function tick() {
 function toggleTimer() {
   if (T.running) { T.acc += Date.now() - T.start; T.running = false; }
   else { T.start = Date.now(); T.running = true; }
-  saveTimerState(); tick();
+  saveTimerState(); tickTimer ? startTick() : tick();
 }
-function resetTimer() { T.acc = 0; T.running = false; T.start = 0; saveTimerState(); tick(); }
+function resetTimer() { T.acc = 0; T.running = false; T.start = 0; saveTimerState(); tickTimer ? startTick() : tick(); }
 $('#pTimer').onclick = toggleTimer;
 $('#pTarget').onclick = e => openMenu(e.currentTarget, m => {
   const lbl = h('div', 'lbl');
@@ -2062,7 +2084,7 @@ function openPrivacy() {
 
 // ── 사용 설명서(앱에 들어 있는 PDF) ──
 // 처음 설치하면 서재에 한 번 넣어 둔다. 설명서를 새로 고치면 GUIDE_VER 을 올린다(지운 사람에게 다시 억지로 넣지는 않음 — 판이 바뀔 때 한 번뿐)
-const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 4;
+const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 5;
 async function addGuide(open) {
   busy('사용 설명서를 준비하는 중…');
   try {
