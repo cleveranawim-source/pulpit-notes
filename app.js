@@ -1882,7 +1882,7 @@ function updateWake() {
 }
 $('#pWake').onclick = () => wakeLock ? toast('화면이 꺼지지 않게 잡아 두었어요', 1600) : (requestWake(), toast('화면 꺼짐 방지를 다시 켰어요. 안 되면 설정 › 디스플레이 › 자동 잠금을 ‘안 함’으로 두세요.', 3600));
 // ── 자동 스크롤(강단) ──
-// 원고를 화면 점 하나(아이패드 0.5px)씩, 필요한 만큼만 깨어 민다(1초 최대 30번, 멈춤이면 0번).
+// 위쪽 막대의 '자동' 버튼 → 막대 아래 조절판. 원고를 화면 점 하나(아이패드 0.5px)씩, 필요한 만큼만 깨어 민다(1초 최대 30번, 멈춤이면 0번).
 // 빠르기는 쪽 표시 폭에 비례 — 가로로 돌리거나 확대해도 글자 기준 빠르기가 같다. 속도 9 ≈ A4 한 쪽 4~5분.
 // 설계: docs/superpowers/specs/2026-10-04-autoscroll-design.md
 const AUTO_K = 0.0045, AUTO_R = 1.17;
@@ -1892,8 +1892,7 @@ const pageW = () => R?.pages[curPage()]?.dw || scroller.clientWidth;
 const autoVel = () => AUTO_K * pageW() * AUTO_R ** (A.speed - 9); // CSS px/초
 const fmtSpeed = s => String(Math.round(s * 10) / 10);
 function renderAuto() {
-  autoBox.classList.toggle('on', A.on);
-  autoBox.classList.toggle('run', A.running);
+  for (const el of [autoBox, $('#autoBtn')]) { el.classList.toggle('on', A.on); el.classList.toggle('run', A.running); }
   const p = $('#aPlay');
   p.innerHTML = `<svg class="i"><use href="#i-${A.running ? 'pause' : 'play'}"/></svg>`;
   p.setAttribute('aria-label', A.running ? '멈춤' : '흐르기');
@@ -1901,6 +1900,7 @@ function renderAuto() {
 }
 function autoPanelShow(on) {
   clearTimeout(A.hideT);
+  if (on) autoBox.style.top = $('#rbar').getBoundingClientRect().bottom + 8 + 'px'; // 위쪽 막대 바로 아래
   autoPanel.hidden = !on;
   if (on) A.hideT = setTimeout(() => { autoPanel.hidden = true; }, 5000); // 5초 손대지 않으면 접는다(원고는 계속 흐름)
 }

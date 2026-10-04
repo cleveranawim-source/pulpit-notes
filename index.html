@@ -392,16 +392,16 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 }
 @media (max-width:480px){ .palette .size,.palette .sep.s2,.opts .hint{display:none} }
 @media (max-width:760px){ .opts .hint{display:none} }
-/* 강단 막대: 아이패드 미니 세로(744)에서도 서재 버튼까지 한 줄에 */
-@media (max-width:800px){ #reader[data-mode="pulpit"] .rbar{gap:6px} #reader[data-mode="pulpit"] .rbar .pill{padding:0 8px} #reader[data-mode="pulpit"] .seg svg.i{display:none} #reader[data-mode="pulpit"] .seg button{padding:0 12px} }
-/* 자동 스크롤(강단): 오른쪽 아래 버튼 → 누르면 왼쪽으로 조절판. 흐림 없이 불투명 */
-.autobox{position:absolute;right:calc(16px + var(--safe-r));bottom:calc(16px + var(--safe-b));z-index:6;display:flex;align-items:center;gap:8px}
-.autobtn{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;position:relative;color:var(--ink-2);background:var(--bar-solid);
-  box-shadow:0 10px 26px -12px rgba(40,30,20,.55),0 0 0 1px rgba(0,0,0,.06)}
-.autobtn .adot{position:absolute;right:8px;top:8px;width:9px;height:9px;border-radius:50%;background:var(--ink-3);display:none}
-.autobox.on .autobtn{color:var(--accent)}
-.autobox.on .adot{display:block}
-.autobox.run .adot{background:var(--ok)}
+/* 강단 막대: 아이패드 미니 세로(744)·11인치 세로(820·834)에서도 한 줄에 */
+@media (max-width:860px){ #reader[data-mode="pulpit"] .rbar{gap:6px} #reader[data-mode="pulpit"] .rbar .pill{padding:0 8px} #reader[data-mode="pulpit"] .seg svg.i{display:none} #reader[data-mode="pulpit"] .seg button{padding:0 12px} }
+/* 자동 스크롤(강단): 위쪽 막대의 '자동' 버튼 → 막대 바로 아래 오른쪽에 조절판. 흐림 없이 불투명 */
+.autobox{position:fixed;right:calc(12px + var(--safe-r));top:calc(70px + var(--safe-t));z-index:30}
+.autopill{position:relative;color:var(--ink-2);border:1px solid rgba(0,0,0,.12)}
+.autopill .albl{font-size:14px}
+.autopill .adot{position:absolute;right:4px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--ink-3);display:none}
+.autopill.on{color:var(--accent);border-color:currentColor}
+.autopill.on .adot{display:block}
+.autopill.run .adot{background:var(--ok)}
 .autopanel{display:flex;align-items:center;gap:2px;padding:5px;border-radius:16px;background:var(--bar-solid);color:var(--ink);
   box-shadow:0 14px 34px -14px rgba(40,30,20,.5),0 0 0 1px rgba(0,0,0,.05)}
 .autopanel[hidden]{display:none}
@@ -410,8 +410,10 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .ab svg.i{width:19px;height:19px}
 .aspd{min-width:66px;text-align:center;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
 .afit{color:var(--ink-2);font-size:13.5px}
-#reader[data-theme="dark"] .autobtn,#reader[data-theme="dark"] .autopanel{color:#E9E3D8;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
-#reader[data-theme="dark"] .autobox.on .autobtn{color:#E8909E}
+#reader[data-theme="dark"] .autopanel{color:#E9E3D8;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+#reader[data-theme="dark"] .autopill{color:#B8AFA2;border-color:rgba(255,255,255,.16)}
+#reader[data-theme="dark"] .autopill.on{color:#E8909E;border-color:currentColor}
+@media (max-width:760px){ #reader[data-mode="pulpit"] .autopill .albl{display:none} } /* 아이패드 미니 세로만 그림만 */
 </style>
 </head>
 <body>
@@ -523,6 +525,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
       <span class="pill clock" id="pClock"></span>
       <button class="pill timer" id="pTimer" aria-label="타이머 시작·멈춤"><span class="dot"></span><span class="tt" id="pTimerTxt">25:00</span><small id="pTimerSub">시작</small></button>
       <button class="pill tset" id="pTarget" aria-label="타이머 설정"><svg class="i"><use href="#i-timer"/></svg><span id="pTargetTxt">25분</span></button>
+      <button class="pill autopill" id="autoBtn" aria-label="자동 스크롤"><svg class="i"><use href="#i-scroll"/></svg><span class="albl">자동</span><span class="adot"></span></button>
       <button class="pill" id="pTheme" aria-label="화면 밝기"><svg class="i"><use href="#i-moon"/></svg></button>
       <span class="pill wake off" id="pWake" title="화면 꺼짐 방지"><svg class="i"><use href="#i-lock"/></svg></span>
     </div>
@@ -565,7 +568,6 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
       <button class="ab afit" id="aFit"><svg class="i"><use href="#i-timer"/></svg>시간에 맞추기</button>
       <button class="ab" id="aOff" aria-label="자동 스크롤 끄기"><svg class="i"><use href="#i-x"/></svg></button>
     </div>
-    <button class="autobtn" id="autoBtn" aria-label="자동 스크롤"><svg class="i"><use href="#i-scroll"/></svg><span class="adot"></span></button>
   </div>
 </section>
 
