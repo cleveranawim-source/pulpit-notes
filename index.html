@@ -394,6 +394,24 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 @media (max-width:760px){ .opts .hint{display:none} }
 /* 강단 막대: 아이패드 미니 세로(744)에서도 서재 버튼까지 한 줄에 */
 @media (max-width:800px){ #reader[data-mode="pulpit"] .rbar{gap:6px} #reader[data-mode="pulpit"] .rbar .pill{padding:0 8px} #reader[data-mode="pulpit"] .seg svg.i{display:none} #reader[data-mode="pulpit"] .seg button{padding:0 12px} }
+/* 자동 스크롤(강단): 오른쪽 아래 버튼 → 누르면 왼쪽으로 조절판. 흐림 없이 불투명 */
+.autobox{position:absolute;right:calc(16px + var(--safe-r));bottom:calc(16px + var(--safe-b));z-index:6;display:flex;align-items:center;gap:8px}
+.autobtn{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;position:relative;color:var(--ink-2);background:var(--bar-solid);
+  box-shadow:0 10px 26px -12px rgba(40,30,20,.55),0 0 0 1px rgba(0,0,0,.06)}
+.autobtn .adot{position:absolute;right:8px;top:8px;width:9px;height:9px;border-radius:50%;background:var(--ink-3);display:none}
+.autobox.on .autobtn{color:var(--accent)}
+.autobox.on .adot{display:block}
+.autobox.run .adot{background:var(--ok)}
+.autopanel{display:flex;align-items:center;gap:2px;padding:5px;border-radius:16px;background:var(--bar-solid);color:var(--ink);
+  box-shadow:0 14px 34px -14px rgba(40,30,20,.5),0 0 0 1px rgba(0,0,0,.05)}
+.autopanel[hidden]{display:none}
+.ab{height:40px;min-width:40px;padding:0 8px;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px;color:inherit}
+.ab:active{background:rgba(0,0,0,.06)}
+.ab svg.i{width:19px;height:19px}
+.aspd{min-width:66px;text-align:center;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.afit{color:var(--ink-2);font-size:13.5px}
+#reader[data-theme="dark"] .autobtn,#reader[data-theme="dark"] .autopanel{color:#E9E3D8;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+#reader[data-theme="dark"] .autobox.on .autobtn{color:#E8909E}
 </style>
 </head>
 <body>
@@ -435,6 +453,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M5 5h14M5 9h14M5 13h8"/><path d="M17.5 13v7"/><path d="M15 17.5l2.5 2.5 2.5-2.5"/></symbol>
     <symbol id="i-pages" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
   </defs>
 </svg>
@@ -536,6 +556,17 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <span class="sep"></span>
     <button class="tool finger" id="btnFinger" aria-label="손가락으로 쓰기"><svg class="i"><use href="#i-hand"/></svg></button>
   </nav>
+  <div class="autobox pulpit-only" id="autoBox">
+    <div class="autopanel" id="autoPanel" hidden>
+      <button class="ab" id="aPlay" aria-label="멈춤"><svg class="i"><use href="#i-pause"/></svg></button>
+      <button class="ab" id="aSlow" aria-label="느리게"><svg class="i"><use href="#i-minus"/></svg></button>
+      <span class="aspd" id="aSpd">속도 9</span>
+      <button class="ab" id="aFast" aria-label="빠르게"><svg class="i"><use href="#i-plus"/></svg></button>
+      <button class="ab afit" id="aFit"><svg class="i"><use href="#i-timer"/></svg>시간에 맞추기</button>
+      <button class="ab" id="aOff" aria-label="자동 스크롤 끄기"><svg class="i"><use href="#i-x"/></svg></button>
+    </div>
+    <button class="autobtn" id="autoBtn" aria-label="자동 스크롤"><svg class="i"><use href="#i-scroll"/></svg><span class="adot"></span></button>
+  </div>
 </section>
 
 <script type="module" src="app.js"></script>

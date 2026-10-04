@@ -35,7 +35,7 @@ delete savedSettings.penSize; delete savedSettings.hlSize;
 const settings = Object.assign({
   tool: 'pen', penColor: PEN_COLORS[1], hlColor: HL_COLORS[0], penW: 0.0036, hlW: 0.026, eraseR: 0.012, eraseMode: 'part',
   finger: false, themePrep: 'light', themePulpit: 'light', target: 25, timerMode: 'down', sort: 'recent',
-  zoom: 1, thumbs: false, pulpitInk: false,
+  zoom: 1, thumbs: false, pulpitInk: false, autoSpeed: 9,
 }, savedSettings);
 function readLS(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
 function writeLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
