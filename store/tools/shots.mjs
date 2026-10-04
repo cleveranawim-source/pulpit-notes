@@ -128,6 +128,13 @@ await page.keyboard.press('ArrowRight');
 await sleep(750);
 await page.screenshot({ path: `${OUT}/3-pulpit.png`, captureBeyondViewport: false }); console.log('shot 3-pulpit');
 
+// 6-1) 자동 스크롤: 위쪽 '자동' → 막대 아래 조절판, 흐르는 중
+await page.evaluate(() => { document.getElementById('scroller').scrollTop = 520; document.getElementById('autoBtn').click(); });
+await sleep(1500);
+await page.screenshot({ path: `${OUT}/3b-auto.png`, captureBeyondViewport: false }); console.log('shot 3b-auto');
+await page.evaluate(() => { document.getElementById('aOff').click(); document.getElementById('scroller').scrollTop = 0; });
+await sleep(300); await page.keyboard.press('ArrowRight'); await sleep(750);
+
 // 7) 강단 · 어둡게
 await page.evaluate(() => { document.getElementById('pTheme').click(); document.getElementById('pTheme').click(); });
 await sleep(2600);

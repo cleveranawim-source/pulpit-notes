@@ -172,6 +172,12 @@ await clip('timer', ['.menu', '#pTimer', '#pTarget'], { pad: 12, l: 46, r: 10, m
   { sel: '.tpop .tmode', n: 1, at: 'left' }, { sel: '.tpop .dial', n: 2, at: 'left' }, { sel: '.tpop .chips', n: 3, at: 'left' },
   { sel: '.tpop [data-a=reset]', n: 4, at: 'left' }, { sel: '.tpop [data-a=go]', n: 5, at: 'right' }] });
 await page.keyboard.press('Escape'); await sleep(200);
+// 자동 스크롤 조절판(9장): 위쪽 '자동' → 막대 아래 조절판
+await page.evaluate(() => document.getElementById('autoBtn').click()); await sleep(600);
+await clip('autoscroll', ['#autoBtn', '#autoBox'], { pad: 12, l: 34, b: 40, marks: [
+  { sel: '#autoBtn', n: 1, at: 'left' }, { sel: '#aPlay', n: 2, at: 'below' }, { sel: '#aSpd', n: 3, at: 'below' },
+  { sel: '#aFit', n: 4, at: 'below' }, { sel: '#aOff', n: 5, at: 'below' }] });
+await page.evaluate(() => document.getElementById('aOff').click()); await sleep(200);
 await blank(false);
 // 타이머 상태별 모습(대기 · 진행 · 막바지 · 넘김 · 멈춤) + 스톱워치
 for (const [name, secAgo, running, acc, mode] of [['timer-idle', 0, false, 0], ['timer-run', 7 * 60 + 12, true, 0], ['timer-warn', 21 * 60 + 40, true, 0],
