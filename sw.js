@@ -1,6 +1,6 @@
 // 강단노트 서비스워커 — 인터넷 없이도 열리도록 앱 파일을 보관한다.
 // 앱 파일을 고치면 VERSION 을 올릴 것(구 캐시 정리).
-const VERSION = 'pn-v17';
+const VERSION = 'pn-v18';
 const SHELL = [
   './', 'index.html', 'app.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
@@ -9,7 +9,8 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // 브라우저 HTTP 캐시(Pages max-age=600)를 거치면 10분 안에 올린 새 판이 옛 파일을 담는다 → reload
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -26,6 +27,7 @@ self.addEventListener('fetch', e => {
 
   // 라이브러리·글꼴·사용 설명서: 한 번 받으면 캐시에서
   if (/\/(vendor|fonts|sample)\//.test(url.pathname)) {
+    // (주소의 ?v= 는 무시하지 않는다 — 새 판 설명서를 옛 캐시에서 꺼내 주지 않게)
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => put(req, res.clone()) && res)));
     return;
   }

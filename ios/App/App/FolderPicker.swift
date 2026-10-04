@@ -72,6 +72,7 @@ public class FolderPickerPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDe
         DispatchQueue.global(qos: .userInitiated).async {
             let fm = FileManager.default
             let tmp = fm.temporaryDirectory.appendingPathComponent("picked", isDirectory: true)
+            try? fm.removeItem(at: tmp) // 지난번 시간 초과 뒤 늦게 복사된 파일 정리(JS 는 받은 파일을 읽고 지운다)
             try? fm.createDirectory(at: tmp, withIntermediateDirectories: true)
             var files: [[String: String]] = []
             var failed: [[String: String]] = []
@@ -113,8 +114,8 @@ public class FolderPickerPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDe
         }
         if done.wait(timeout: .now() + Self.downloadTimeout) == .timedOut {
             coord.cancel()
-            _ = done.wait(timeout: .now() + 5)
-            try? FileManager.default.removeItem(at: dst)
+            // 취소 직전에 다 받아 복사까지 끝났다면 그대로 쓴다(늦게 끝난 복사는 다음 선택 때 정리)
+            if done.wait(timeout: .now() + 5) == .success, out.reason == nil { return nil }
             return isCancelled ? "cancel" : "timeout"
         }
         if out.reason != nil && isCancelled { return "cancel" }

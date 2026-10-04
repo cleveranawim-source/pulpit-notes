@@ -474,6 +474,7 @@ async function openDoc(id) {
       el.dataset.i = i;
       const inkCv = document.createElement('canvas');
       inkCv.className = 'ink';
+      inkCv.width = inkCv.height = 0; // 필기가 생길 때 inkReady 가 크기를 정한다
       el.append(inkCv, Object.assign(document.createElement('span'), { className: 'pno', textContent: i + 1 }));
       pagesEl.append(el);
       R.pages.push({ i, page, w: vp.width, h: vp.height, el, ink: inkCv, cv: null, ictx: null, key: null, task: null, top: 0, s: 1, dw: 0, dh: 0 });
@@ -512,6 +513,7 @@ async function closeDoc() {
   thumbToken++;
   $('#thumbsList').replaceChildren(); $('#thumbsList').dataset.sig = ''; $('#thumbs').hidden = true;
   pagesEl.replaceChildren();
+  palmIds.clear(); pinch.st = null;
   $('.coach')?.remove();
   reader.hidden = true;
   lib.hidden = false;
@@ -742,6 +744,7 @@ function inSelBox(x, y, pad = 26) {
 
 pagesEl.addEventListener('pointerdown', e => {
   if (e.target.closest('.selbar')) return;
+  if (e.pointerType === 'touch' && palmGuard() && (penBusy() || e.width > PALM_R * 2 || e.height > PALM_R * 2)) return; // 손바닥
   if (e.target.closest('.selhandle') && R?.sel && !live) { startScale(e); return; }
   if (e.target.closest('.selrot') && R?.sel && !live) { startRotate(e); return; }
   const role = pointerRole(e);
@@ -750,7 +753,6 @@ pagesEl.addEventListener('pointerdown', e => {
     toast('애플펜슬이 감지돼 손가락 쓰기를 껐어요. 손가락은 넘기기용이에요.', 3200);
   }
   if (e.pointerType === 'pen') penSeen = Date.now();
-  if (e.pointerType === 'touch' && palmGuard() && (penBusy() || e.width > PALM_R * 2 || e.height > PALM_R * 2)) return;
   if (live && live.pt === 'touch' && e.pointerType === 'touch') { cancelLive(); return; } // 두 번째 손가락 → 스크롤
   if (role === 'tap') { tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), st: scroller.scrollTop }; return; }
   const onSel = R.mode === 'prep' && inSelBox(e.clientX, e.clientY);
@@ -820,7 +822,9 @@ function cancelPinch() { // 펜슬이 닿으면 손바닥이 만든 확대·이�
 }
 scroller.addEventListener('touchstart', e => {
   if (e.target.closest?.('.selbar')) return;
-  const now = performance.now();
+  const now = performance.now(), on = new Set([...e.touches].map(t => t.identifier));
+  for (const id of [...palmIds]) if (!on.has(id)) palmIds.delete(id); // 지운 요소 위에서 뗀 터치는 touchend 가 여기 오지 않는다
+  for (const id of [...tStart.keys()]) if (!on.has(id)) tStart.delete(id);
   for (const t of e.changedTouches) tStart.set(t.identifier, now);
   const stylus = [...e.changedTouches].some(t => t.touchType === 'stylus');
   if (stylus && pinch.st) cancelPinch();
@@ -1010,6 +1014,7 @@ function startDraw(e, hl) {
   live.kind = 'draw';
   live.S = { t: hl ? 'hl' : 'pen', c: hl ? settings.hlColor : settings.penColor, w: hl ? settings.hlW : settings.penW, p: [] };
   addPoint(e);
+  if (!inkReady(P)) return;
   strokeStyle(P.ictx, live.S);
   drawDot(P.ictx, live.S, P);
 }
@@ -1026,7 +1031,7 @@ function addPoint(ev, draw) {
   L.lastPr = pr;
   S.p.push(x / P.w, y / P.h, pr);
   const m = n + 1;
-  if (draw && m >= 3) { strokeStyle(P.ictx, S); drawQuad(P.ictx, S, P, m - 2); }
+  if (draw && m >= 3 && (P.ictx || inkReady(P))) { strokeStyle(P.ictx, S); drawQuad(P.ictx, S, P, m - 2); } // 쓰는 도중 회전·창 크기 변화로 캔버스가 비워질 수 있다
 }
 // 형광펜을 대충 곧게 그었다면 반듯한 직선으로(거의 수평이면 수평으로). 너그럽게 본다:
 // - 펜을 대고 뗄 때 생기는 양 끝 삐침은 판단에서 뺀다(굵기 1.5배와 쪽 폭 2.5%≈5mm 중 큰 값, 전체 길이 15%까지)
@@ -1806,7 +1811,9 @@ function tick() {
   setClass($('#pTimer'), 'pill timer' + (state ? ' ' + state : ''));
   // 설교가 끝나고 켜 둔 채 두면 화면이 밤새 켜져 있지 않게: 타이머가 멈췄거나 30분 넘게 지났는데
   // 15분 동안 손대지 않으면 꺼짐 방지를 푼다(화면을 톡 치면 다시 켜진다)
-  if (wakeLock && (!T.running || e > tgt + 30 * 60e3) && Date.now() - lastTouch > 15 * 60e3) releaseWake();
+  // (아직 시작하지 않았으면 예배 앞부분 내내 기다릴 수 있어 90분)
+  const quiet = Date.now() - lastTouch, stale = idle ? quiet > 90 * 60e3 : (!T.running || e > tgt + 30 * 60e3) && quiet > 15 * 60e3;
+  if (wakeLock && stale) releaseWake();
 }
 function toggleTimer() {
   if (T.running) { T.acc += Date.now() - T.start; T.running = false; }
@@ -2085,10 +2092,12 @@ function openPrivacy() {
 // ── 사용 설명서(앱에 들어 있는 PDF) ──
 // 처음 설치하면 서재에 한 번 넣어 둔다. 설명서를 새로 고치면 GUIDE_VER 을 올린다(지운 사람에게 다시 억지로 넣지는 않음 — 판이 바뀔 때 한 번뿐)
 const GUIDE_NAME = '강단노트 사용 설명서.pdf', GUIDE_VER = 5;
+// 판 번호를 붙여 받는다 — 웹판이 새 버전으로 바뀌는 첫 실행은 옛 서비스워커가 맡아 옛 설명서를 캐시에서 주었다
+const guideBlob = () => fetch(`sample/guide.pdf?v=${GUIDE_VER}`).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); });
 async function addGuide(open) {
   busy('사용 설명서를 준비하는 중…');
   try {
-    const blob = await fetch('sample/guide.pdf').then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); });
+    const blob = await guideBlob();
     await importFiles([new File([blob], GUIDE_NAME, { type: 'application/pdf' })], { open });
   } catch (e) {
     console.error(e);
@@ -2106,11 +2115,13 @@ async function openGuide() {
 async function seedGuide() {
   const seen = readLS('pn.guideVer', 0);
   if (seen >= GUIDE_VER) return;
-  writeLS('pn.guideVer', GUIDE_VER);
   const old = (await idb.all('docs')).filter(d => d.name === GUIDE_NAME);
-  if (seen && !old.length) return;
+  if (seen && !old.length) return writeLS('pn.guideVer', GUIDE_VER); // 스스로 지운 사람에게는 다시 넣지 않는다
+  const blob = await guideBlob().catch(() => null);
+  if (!blob) return; // 받지 못하면 판 번호를 남기지 않고 다음에 다시
   for (const d of old) await Promise.all([idb.del('docs', d.id), idb.del('files', d.id), idb.del('ink', d.id)]);
-  await addGuide(false);
+  await importFiles([new File([blob], GUIDE_NAME, { type: 'application/pdf' })], { open: false });
+  writeLS('pn.guideVer', GUIDE_VER);
   if (old.length) toast('사용 설명서가 새 판으로 바뀌었어요', 2600);
 }
 
@@ -2261,8 +2272,8 @@ addEventListener('keydown', e => {
   if (mod && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '0')) { e.preventDefault(); stepZoom(e.key === '0' ? 0 : e.key === '-' ? -1 : 1); return; }
   if (mod) return;
   const next = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'], prev = ['ArrowLeft', 'ArrowUp', 'PageUp'];
-  if (next.includes(e.key)) { e.preventDefault(); turn(1); }
-  else if (prev.includes(e.key)) { e.preventDefault(); turn(-1); }
+  if (next.includes(e.key)) { e.preventDefault(); turn(1); if (R.mode === 'pulpit' && !wakeLock) requestWake(); }
+  else if (prev.includes(e.key)) { e.preventDefault(); turn(-1); if (R.mode === 'pulpit' && !wakeLock) requestWake(); }
   else if (e.key === 'Escape') { if ($('.menu')) closeMenu(); else if (R.sel) clearSel(); else if (R.mode === 'pulpit') setMode('prep'); }
   else if ((e.key === 'Delete' || e.key === 'Backspace') && R.sel) { e.preventDefault(); deleteSel(); }
   else if (R.mode === 'prep' && 'pehs'.includes(e.key.toLowerCase())) {
