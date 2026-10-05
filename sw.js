@@ -1,6 +1,6 @@
 // 강단노트 서비스워커 — 인터넷 없이도 열리도록 앱 파일을 보관한다.
 // 앱 파일을 고치면 VERSION 을 올릴 것(구 캐시 정리).
-const VERSION = 'pn-v22';
+const VERSION = 'pn-v23';
 const SHELL = [
   './', 'index.html', 'app.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
