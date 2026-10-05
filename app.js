@@ -24,7 +24,7 @@ if (NATIVE) document.documentElement.classList.add('native');
 const PEN_COLORS = ['#1F1B16', '#D23B2E', '#2456C8', '#1F8A4C'];
 const HL_COLORS = ['#FFE45C', '#A8E890', '#FFB3D1', '#A9DBFF'];
 const THEMES = ['light', 'sepia', 'dark'];
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 const SUPPORT_EMAIL = 'lovewords10@gmail.com';
 
 const savedSettings = readLS('pn.settings', {});
