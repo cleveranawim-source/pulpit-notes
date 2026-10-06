@@ -12,6 +12,9 @@ const PDF_OPTS = {
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// 같은 값이면 DOM 을 건드리지 않는다 — 1초에 여러 번 부르는 곳(타이머·자동 스크롤)에서 막대를 다시 그리지 않게
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+const setClass = (el, v) => { if (el.className !== v) el.className = v; };
 const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
 
 // 아이패드 앱(Capacitor)으로 실행 중인지. 웹판과 같은 코드를 쓰고, 기기 기능만 갈라 쓴다
@@ -24,7 +27,7 @@ if (NATIVE) document.documentElement.classList.add('native');
 const PEN_COLORS = ['#1F1B16', '#D23B2E', '#2456C8', '#1F8A4C'];
 const HL_COLORS = ['#FFE45C', '#A8E890', '#FFB3D1', '#A9DBFF'];
 const THEMES = ['light', 'sepia', 'dark'];
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 const SUPPORT_EMAIL = 'lovewords10@gmail.com';
 
 const savedSettings = readLS('pn.settings', {});
@@ -498,10 +501,10 @@ async function openDoc(id) {
 }
 function updateSub() {
   if (!R) return;
-  const d = R.doc;
-  $('#rSub').textContent = [d.date, d.kind, `${curPage() + 1} / ${d.pages}쪽`].filter(Boolean).join(' · ');
-  $('#pPageTxt').textContent = `${curPage() + 1} / ${d.pages}`;
-  markThumb();
+  const d = R.doc, cur = curPage();
+  setText($('#rSub'), [d.date, d.kind, `${cur + 1} / ${d.pages}쪽`].filter(Boolean).join(' · '));
+  setText($('#pPageTxt'), `${cur + 1} / ${d.pages}`);
+  if (cur !== R.subPage) { R.subPage = cur; markThumb(); } // 쪽이 바뀔 때만(미리보기를 열 때는 따로 부른다)
 }
 async function closeDoc() {
   if (!R) return;
@@ -1794,8 +1797,6 @@ function tickLoop() {
   tickTimer = setTimeout(tickLoop, wait + 15);
 }
 // 0.5초마다 부르지만 글자·색·막대가 실제로 바뀔 때만 건드린다(가만히 있는 화면을 다시 그리지 않게)
-const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
-const setClass = (el, v) => { if (el.className !== v) el.className = v; };
 function stopTick() { clearTimeout(tickTimer); tickTimer = 0; }
 function tick() {
   const now = new Date();
@@ -1882,14 +1883,18 @@ function updateWake() {
 }
 $('#pWake').onclick = () => wakeLock ? toast('화면이 꺼지지 않게 잡아 두었어요', 1600) : (requestWake(), toast('화면 꺼짐 방지를 다시 켰어요. 안 되면 설정 › 디스플레이 › 자동 잠금을 ‘안 함’으로 두세요.', 3600));
 // ── 자동 스크롤(강단) ──
-// 위쪽 막대의 '자동' 버튼 → 막대 아래 조절판. 원고를 화면 점 하나(아이패드 0.5px)씩, 필요한 만큼만 깨어 민다(1초 최대 30번, 멈춤이면 0번).
-// 빠르기는 쪽 표시 폭에 비례 — 가로로 돌리거나 확대해도 글자 기준 빠르기가 같다. 속도 9 ≈ A4 한 쪽 4~5분.
+// 위쪽 막대의 '자동' 버튼 → 막대 아래 조절판. 원고를 한 칸(느릴 때 1px, 보통부터 2px)씩, 그만큼 갈 때만 깨어 민다(1초 최대 30번, 멈춤이면 0번).
+// 한 번 밀 때마다 화면 전체를 다시 합성하므로 1초에 미는 횟수가 곧 발열이다(시뮬레이터 실측: 1초 1번에 CPU 약 1.4%,
+// 스크롤 대신 transform 으로 밀어도 같음). 그래서 보통 속도부터는 2px 씩 밀어 횟수를 반으로 줄인다.
+// 아이패드 앱(WKWebView)은 소수 스크롤을 받지 않아 1px 보다 잘게는 못 민다.
+// 빠르기는 쪽 표시 폭에 비례 — 가로로 돌리거나 확대해도 글자 기준 빠르기가 같다. 속도 9 ≈ A4 한 쪽 약 4분(1.0.3보다 30% 빠름 — 사용자 요청).
 // 설계: docs/superpowers/specs/2026-10-04-autoscroll-design.md
-const AUTO_K = 0.0045, AUTO_R = 1.17;
-const A = { on: false, running: false, speed: clamp(+settings.autoSpeed || 9, 1, 20), pos: 0, last: 0, lastSet: null, quantum: 1, timer: 0, hideT: 0, holdUntil: 0, touching: false, moved: 0, wait: 33 };
+const AUTO_K = 0.0058, AUTO_R = 1.17;
+const A = { on: false, running: false, speed: clamp(+settings.autoSpeed || 9, 1, 20), pos: 0, last: 0, lastSet: null, timer: 0, hideT: 0, holdUntil: 0, touching: false, moved: 0, wait: 33 };
 const autoBox = $('#autoBox'), autoPanel = $('#autoPanel');
 const pageW = () => R?.pages[curPage()]?.dw || scroller.clientWidth;
 const autoVel = () => AUTO_K * pageW() * AUTO_R ** (A.speed - 9); // CSS px/초
+const autoStepPx = v => v < 3 ? 1 : 2; // 한 번에 미는 칸 — 1초 3px 보다 느리면 1px(띄엄띄엄 2px 는 눈에 띈다)
 const fmtSpeed = s => String(Math.round(s * 10) / 10);
 function renderAuto() {
   for (const el of [autoBox, $('#autoBtn')]) { el.classList.toggle('on', A.on); el.classList.toggle('run', A.running); }
@@ -1906,7 +1911,9 @@ function autoPanelShow(on) {
 }
 function autoSchedule() {
   clearTimeout(A.timer);
-  A.wait = A.touching || performance.now() < A.holdUntil ? 200 : Math.max(33, 1000 * A.quantum / autoVel());
+  const v = autoVel(), q = autoStepPx(v);
+  const edge = (Math.floor(A.pos / q + 0.5) + 0.5) * q; // 반올림한 자리가 다음 칸으로 바뀌는 곳 — 거기 닿을 때 깨어난다
+  A.wait = A.touching || performance.now() < A.holdUntil ? 200 : Math.max(33, 1000 * (edge - A.pos) / v + 2);
   A.timer = setTimeout(autoStep, A.wait);
 }
 function autoStep() {
@@ -1921,7 +1928,8 @@ function autoStep() {
   const before = A.pos;
   A.pos = Math.min(max, A.pos + autoVel() * dt);
   A.moved += A.pos - before;
-  scroller.scrollTop = A.pos;
+  const q = autoStepPx(autoVel()), y = Math.round(A.pos / q) * q;
+  if (y !== cur) scroller.scrollTop = y;
   A.lastSet = scroller.scrollTop;
   if (A.pos >= max - 0.5) { autoPause(); toast('원고의 끝이에요', 1600); return; }
   autoSchedule();
@@ -1937,10 +1945,6 @@ function autoToggle() { A.running ? autoPause() : autoPlay(); }
 function autoOn() {
   if (!R || R.mode !== 'pulpit') return;
   if (!A.on) {
-    const t0 = scroller.scrollTop; // 소수 스크롤이 되면 기기 화소 하나씩, 아니면 1px씩
-    scroller.scrollTop = t0 + 0.5;
-    A.quantum = Math.abs(scroller.scrollTop - t0 - 0.5) < 0.02 ? 1 / (devicePixelRatio || 1) : 1;
-    scroller.scrollTop = t0;
     A.on = true;
     autoPlay();
   }
