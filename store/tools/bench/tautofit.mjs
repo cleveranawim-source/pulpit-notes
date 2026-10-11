@@ -1,0 +1,23 @@
+// 시간에 맞추기: 남은 분량 ÷ 남은 시간 → 속도(소수 한 자리), 알림, 멈춰 있으면 흐르기 시작, 시간 넘김·원고 끝
+import { open, sleep } from './autolib.mjs';
+const t = await open();
+await t.mode('pulpit'); await sleep(500);
+await t.click('#autoBtn'); await sleep(300); await t.click('#aPlay'); await t.setTop(0); await sleep(300);
+const want = await t.page.evaluate(() => { const s = document.getElementById('scroller'), W = document.querySelector('.page').offsetWidth;
+  const v = (s.scrollHeight - s.clientHeight - s.scrollTop) / (25 * 60); const sp = 9 + Math.log(v / (0.0058 * W)) / Math.log(1.17);
+  return Math.round(Math.min(20, Math.max(1, sp)) * 10) / 10; });
+await t.click('#aFit'); await sleep(300);
+let s = await t.st();
+t.log('25분 · 처음부터 → 계산한 속도', s.spd === `속도 ${want}`, { got: s.spd, want });
+t.log('알림 · 흐르기 시작', s.toast.includes('25분 안에 끝나도록') && s.run, s);
+await t.click('#aPlay');
+await t.click('#pTimer'); await sleep(200); await t.skew(26 * 60e3); await sleep(1200);
+const before = (await t.st()).spd;
+await t.click('#aFit'); await sleep(300); s = await t.st();
+t.log('시간이 지났으면 → 알림 · 속도 그대로', s.toast.includes('남은 설교 시간이 없어요') && s.spd === before, s);
+await t.click('#pTimer'); await t.page.evaluate(() => document.querySelector('#pTarget').click()); await sleep(300);
+await t.page.evaluate(() => document.querySelector('.tpop [data-a=reset]')?.click()); await t.page.keyboard.press('Escape'); await sleep(300);
+const max = await t.maxTop(); await t.setTop(max); await sleep(300);
+await t.click('#aFit'); await sleep(300); s = await t.st();
+t.log('원고 끝에서 → 원고의 끝 알림', s.toast.includes('원고의 끝'), s);
+await t.done();
