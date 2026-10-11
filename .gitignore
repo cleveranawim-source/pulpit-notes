@@ -6,3 +6,4 @@ ios/App/App/public/
 ios/DerivedData/
 build/
 store/tools/cache/
+store/tools/bench/out/
