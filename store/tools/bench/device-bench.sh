@@ -18,7 +18,9 @@ const theme = async t => { for (let i = 0; i < 3 && q('#reader').dataset.theme !
 const speed9 = async () => { for (let i = 0; i < 25 && q('#aSpd').textContent !== '속도 9'; i++) { q(+q('#aSpd').textContent.replace('속도 ', '') > 9 ? '#aSlow' : '#aFast').click(); await w(30); } };
 (async () => {
   await w(3000);
-  [...document.querySelectorAll('.card')].find(c => c.querySelector('h3').textContent.normalize('NFC').includes('사용 설명서')).querySelector('.sheet').click(); await w(3000);
+  const keep = { s: localStorage.getItem('pn.settings'), t: localStorage.getItem('pn.timer') }; // 끝나면 사용자 설정을 되돌린다
+  const cards = [...document.querySelectorAll('.card')];
+  (cards.find(c => c.querySelector('h3').textContent.normalize('NFC').includes('사용 설명서')) || cards[0]).querySelector('.sheet').click(); await w(3000);
   q('#modeSeg [data-mode="pulpit"]').click(); await w(1500);
   await theme('light');
   const tm = q('#pTimer'); if (!/run|warn|over/.test(tm.className)) tm.click();
@@ -29,11 +31,13 @@ const speed9 = async () => { for (let i = 0; i < 25 && q('#aSpd').textContent !=
   label('C 예전 방식'); window.__step = 1; window.__noCoalesce = 1; await at(180);
   label('D 어둡게+이번'); window.__step = 0; window.__noCoalesce = 0; await theme('dark'); await at(240);
   label('E 어둡게+꺼짐'); q('#aOff').click(); await at(300);
-  await theme('light'); label('끝');
+  label('끝 — 설정 되돌리는 중'); q('#modeSeg [data-mode="prep"]').click(); await w(500);
+  if (keep.s) localStorage.setItem('pn.settings', keep.s); if (keep.t) localStorage.setItem('pn.timer', keep.t); else localStorage.removeItem('pn.timer');
+  location.reload();
 })();
 JS
 sed -i '' 's#<script type="module" src="app.js"></script>#<script type="module" src="app.js"></script><script src="bench.js"></script>#' $P/index.html
-cd $R && xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -destination "id=$DEV" -derivedDataPath $OUT/dd -allowProvisioningUpdates build -quiet 2>&1 | grep -E "error|warning: .*sign" | head -5
+cd $R && xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -destination "id=$DEV" -derivedDataPath $OUT/dd -allowProvisioningUpdates -allowProvisioningDeviceRegistration build -quiet 2>&1 | grep -E "error|warning: .*sign" | head -5
 APP=$OUT/dd/Build/Products/Release-iphoneos/App.app
 grep -c benchLbl $APP/public/bench.js
 xcrun devicectl device install app --device $DEV $APP | tail -2
