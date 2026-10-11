@@ -642,8 +642,9 @@ scroller.addEventListener('scroll', () => {
     scrollRaf = 0;
     updateVisible();
     updateSub();
-    clearTimeout(posTimer);
-    posTimer = setTimeout(savePos, 700);
+    // 읽던 자리 저장: 손으로 넘길 땐 멈춘 뒤 0.7초에, 자동 스크롤이 흐르는 동안엔 10초에 한 번만(느린 속도에선 칸마다 저장하게 됐다)
+    if (A.running) { if (!posTimer) posTimer = setTimeout(() => { posTimer = 0; savePos(); }, 10000); }
+    else { clearTimeout(posTimer); posTimer = setTimeout(() => { posTimer = 0; savePos(); }, 700); }
   });
 }, { passive: true });
 function savePos() {
@@ -1791,10 +1792,12 @@ const elapsed = () => T.acc + (T.running ? Date.now() - T.start : 0);
 const mmss = ms => { const s = Math.floor(Math.max(0, ms) / 1000); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
 function startTick() { stopTick(); tickLoop(); }
 // 0.5초마다 깨우지 않고, 표시할 숫자가 바뀌는 때에 맞춰 한 번씩(멈춰 있으면 시계가 바뀌는 분마다) 깨운다
+// 자동 스크롤이 흐르는 동안에는 원고를 밀 때(autoStep) 타이머도 함께 그린다 — 따로 그리면 그때마다 화면 전체를 한 번 더 합성한다.
+// 그래서 숫자가 바뀐 뒤 한 칸 밀 만큼 늦게 깨어, 그 사이 못 그렸을 때만 여기서 그린다(늦어도 0.9초)
 function tickLoop() {
   tick();
   const wait = T.running ? 1000 - (elapsed() % 1000) : 60000 - (Date.now() % 60000);
-  tickTimer = setTimeout(tickLoop, wait + 15);
+  tickTimer = setTimeout(tickLoop, wait + (A.running ? Math.min(900, A.wait + 150) : 15));
 }
 // 0.5초마다 부르지만 글자·색·막대가 실제로 바뀔 때만 건드린다(가만히 있는 화면을 다시 그리지 않게)
 function stopTick() { clearTimeout(tickTimer); tickTimer = 0; }
@@ -1929,7 +1932,7 @@ function autoStep() {
   A.pos = Math.min(max, A.pos + autoVel() * dt);
   A.moved += A.pos - before;
   const q = autoStepPx(autoVel()), y = Math.round(A.pos / q) * q;
-  if (y !== cur) scroller.scrollTop = y;
+  if (y !== cur) { scroller.scrollTop = y; if (tickTimer) tick(); } // 시계·타이머 글자도 같은 화면에 함께(tick 은 바뀐 글자만 건드린다)
   A.lastSet = scroller.scrollTop;
   if (A.pos >= max - 0.5) { autoPause(); toast('원고의 끝이에요', 1600); return; }
   autoSchedule();
@@ -1940,7 +1943,7 @@ function autoPlay() {
   A.running = true; A.last = performance.now(); A.lastSet = null;
   renderAuto(); autoSchedule();
 }
-function autoPause() { A.running = false; clearTimeout(A.timer); A.timer = 0; renderAuto(); }
+function autoPause() { A.running = false; clearTimeout(A.timer); A.timer = 0; renderAuto(); if (tickTimer) startTick(); } // 타이머는 다시 제때 깨운다
 function autoToggle() { A.running ? autoPause() : autoPlay(); }
 function autoOn() {
   if (!R || R.mode !== 'pulpit') return;
